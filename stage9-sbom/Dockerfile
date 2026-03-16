@@ -10,6 +10,10 @@ ARG COSIGN_VERSION=2.4.1
 
 RUN apk add --no-cache bash jq docker-cli curl
 
+# ── Corporate CA certificate (place your PEM in the build context) ───────────
+COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+RUN cat /usr/local/share/ca-certificates/corporate-ca.crt >> /etc/ssl/certs/ca-certificates.crt
+
 # ── Trivy from official image ────────────────────────────────────────────────
 COPY --from=trivy /usr/local/bin/trivy /usr/local/bin/trivy
 

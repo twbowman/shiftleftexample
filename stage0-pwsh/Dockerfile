@@ -9,6 +9,10 @@ LABEL description="Stage 0 PowerShell: PSScriptAnalyzer linting"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 
+# ── Corporate CA certificate (place your PEM in the build context) ───────────
+COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+RUN update-ca-certificates
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \

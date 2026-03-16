@@ -9,6 +9,10 @@ LABEL description="Stage 10: Compliance & Policy Enforcement"
 
 RUN apk add --no-cache bash jq curl docker-cli
 
+# ── Corporate CA certificate (place your PEM in the build context) ───────────
+COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+RUN cat /usr/local/share/ca-certificates/corporate-ca.crt >> /etc/ssl/certs/ca-certificates.crt
+
 # ── Cosign ───────────────────────────────────────────────────────────────────
 RUN curl -fsSL "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-linux-${TARGETARCH}" \
     -o /usr/local/bin/cosign \

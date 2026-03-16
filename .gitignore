@@ -4,6 +4,9 @@
 cosign.key
 cosign.pub
 
+# Corporate CA certs copied into stage dirs during build
+stage*/corporate-ca.crt
+
 # Artifacts
 artifacts/
 
