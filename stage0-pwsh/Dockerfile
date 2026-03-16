@@ -18,8 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Corporate CA certificate (optional — empty placeholder used if not provided) ─
-COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
-RUN if [ -s /usr/local/share/ca-certificates/corporate-ca.crt ]; then update-ca-certificates; fi
+COPY certs/corporate-ca.crt /tmp/corporate-ca.crt
+RUN if [ -s /tmp/corporate-ca.crt ]; then \
+      cat /tmp/corporate-ca.crt >> /etc/ssl/certs/ca-certificates.crt; \
+    fi \
+    && rm -f /tmp/corporate-ca.crt
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 

@@ -22,16 +22,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Corporate CA certificate (optional — empty placeholder used if not provided) ─
-COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
-RUN if [ -s /usr/local/share/ca-certificates/corporate-ca.crt ]; then \
-      update-ca-certificates; \
+COPY certs/corporate-ca.crt /tmp/corporate-ca.crt
+RUN if [ -s /tmp/corporate-ca.crt ]; then \
+      cat /tmp/corporate-ca.crt >> /etc/ssl/certs/ca-certificates.crt; \
     fi \
-    && echo "=== Cert input dir ===" \
-    && ls -la /usr/local/share/ca-certificates/ \
-    && echo "=== Bundle tail (last 30 lines) ===" \
-    && tail -30 /etc/ssl/certs/ca-certificates.crt \
-    && echo "=== Cert count in bundle ===" \
-    && grep -c 'BEGIN CERTIFICATE' /etc/ssl/certs/ca-certificates.crt
+    && rm -f /tmp/corporate-ca.crt
 ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
