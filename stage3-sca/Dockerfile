@@ -30,7 +30,7 @@ RUN DOCKER_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "x86_64"
     && rm /tmp/docker.tgz
 
 # ── Trivy ────────────────────────────────────────────────────────────────────
-ARG TRIVY_VERSION=0.58.2
+ARG TRIVY_VERSION=0.69.3
 RUN TRIVY_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "ARM64" || echo "64bit") \
     && curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-${TRIVY_ARCH}.tar.gz" \
     -o /tmp/trivy.tar.gz \
