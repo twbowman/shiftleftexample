@@ -20,10 +20,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Corporate CA certificate (optional — empty placeholder used if not provided) ─
+# ── Corporate CA certificate (optional — filter out expired certs) ────────────
 COPY certs/corporate-ca.crt /tmp/corporate-ca.crt
 RUN if [ -s /tmp/corporate-ca.crt ]; then \
-      cat /tmp/corporate-ca.crt >> /etc/ssl/certs/ca-certificates.crt; \
+      csplit -z -f /tmp/cert- /tmp/corporate-ca.crt '/-----BEGIN CERTIFICATE-----/' '{*}' 2>/dev/null || true; \
+      for f in /tmp/cert-*; do \
+        if openssl x509 -in "$f" -checkend 0 -noout 2>/dev/null; then \
+          cat "$f" >> /etc/ssl/certs/ca-certificates.crt; \
+        fi; \
+      done; \
+      rm -f /tmp/cert-*; \
     fi \
     && rm -f /tmp/corporate-ca.crt
 ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
