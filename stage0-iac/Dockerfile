@@ -20,9 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Corporate CA certificate (place your PEM in the build context) ───────────
+# ── Corporate CA certificate (optional — empty placeholder used if not provided) ─
 COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
-RUN update-ca-certificates
+RUN if [ -s /usr/local/share/ca-certificates/corporate-ca.crt ]; then update-ca-certificates; fi
 ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # ── Python tools: checkov, ansible-lint ──────────────────────────────────────

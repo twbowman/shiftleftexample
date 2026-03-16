@@ -17,9 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libicu74 \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Corporate CA certificate (place your PEM in the build context) ───────────
+# ── Corporate CA certificate (optional — empty placeholder used if not provided) ─
 COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
-RUN update-ca-certificates
+RUN if [ -s /usr/local/share/ca-certificates/corporate-ca.crt ]; then update-ca-certificates; fi
 
 # ── PowerShell Core + PSScriptAnalyzer ───────────────────────────────────────
 RUN PS_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x64") \

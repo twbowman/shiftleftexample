@@ -20,9 +20,13 @@ images=(
 
 echo "==> Checking for ${CERT_DIR}/${CERT_FILE}..."
 if [[ ! -f "${REPO_DIR}/${CERT_DIR}/${CERT_FILE}" ]]; then
-  echo "==> WARNING: ${CERT_DIR}/${CERT_FILE} not found."
-  echo "    Place your corporate CA PEM at: ${REPO_DIR}/${CERT_DIR}/${CERT_FILE}"
-  exit 1
+  echo "==> NOTE: ${CERT_DIR}/${CERT_FILE} not found — building without corporate CA cert."
+  mkdir -p "${REPO_DIR}/${CERT_DIR}"
+  touch "${REPO_DIR}/${CERT_DIR}/${CERT_FILE}"
+  CERT_PLACEHOLDER=true
+else
+  echo "==> Found ${CERT_DIR}/${CERT_FILE}"
+  CERT_PLACEHOLDER=false
 fi
 
 # ── Proxy build args (forwarded if set in environment) ───────────────────────
@@ -46,3 +50,8 @@ done
 echo ""
 echo "==> All images built:"
 docker images --filter "reference=${PREFIX}/*" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
+
+# ── Clean up placeholder cert if we created one ──────────────────────────────
+if $CERT_PLACEHOLDER; then
+  rm -f "${REPO_DIR}/${CERT_DIR}/${CERT_FILE}"
+fi
