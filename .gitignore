@@ -1,0 +1,12 @@
+# Secrets - never commit
+.secrets
+*.key
+cosign.key
+cosign.pub
+
+# Artifacts
+artifacts/
+
+# OS
+.DS_Store
+Thumbs.db

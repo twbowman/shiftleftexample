@@ -1,0 +1,24 @@
+---
+# Sample role with issues
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+# ansible-lint: name[missing]
+- apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - curl
+    - wget
+    - vim
+
+# ansible-lint: no-changed-when
+- name: Check disk space
+  command: df -h
+
+- name: Set timezone
+  command: timedatectl set-timezone UTC
+  changed_when: false

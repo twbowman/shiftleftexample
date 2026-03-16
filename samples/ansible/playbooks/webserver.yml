@@ -1,0 +1,41 @@
+---
+# Sample Ansible playbook with intentional lint issues
+
+- name: Configure webserver
+  hosts: webservers
+  become: yes
+
+  tasks:
+    # ansible-lint: command-instead-of-module
+    - name: Install nginx
+      command: apt-get install -y nginx
+
+    # ansible-lint: no-changed-when
+    - name: Start nginx
+      command: systemctl start nginx
+
+    # ansible-lint: yaml[truthy] - using yes instead of true
+    - name: Enable nginx at boot
+      service:
+        name: nginx
+        enabled: yes
+        state: started
+
+    # checkov: CKV_ANS_1 - using shell without validation
+    - name: Run cleanup script
+      shell: rm -rf /tmp/*
+
+    # ansible-lint: risky-file-permissions
+    - name: Copy config file
+      copy:
+        src: files/nginx.conf
+        dest: /etc/nginx/nginx.conf
+
+    # Good task for comparison
+    - name: Ensure log directory exists
+      file:
+        path: /var/log/myapp
+        state: directory
+        mode: "0755"
+        owner: www-data
+        group: www-data
