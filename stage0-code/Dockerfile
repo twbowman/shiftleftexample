@@ -25,6 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
 RUN if [ -s /usr/local/share/ca-certificates/corporate-ca.crt ]; then update-ca-certificates; fi
 ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 # ── Python tools: ruff, bandit ───────────────────────────────────────────────
 RUN pip3 install --no-cache-dir --break-system-packages \
