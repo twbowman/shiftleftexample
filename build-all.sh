@@ -38,6 +38,14 @@ for var in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
   fi
 done
 
+# ── Clean up placeholder cert on exit ─────────────────────────────────────────
+cleanup() {
+  if $CERT_PLACEHOLDER; then
+    rm -f "${REPO_DIR}/${CERT_DIR}/${CERT_FILE}"
+  fi
+}
+trap cleanup EXIT
+
 echo "==> Building ${#images[@]} images..."
 
 for stage in "${images[@]}"; do
@@ -50,8 +58,3 @@ done
 echo ""
 echo "==> All images built:"
 docker images --filter "reference=${PREFIX}/*" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
-
-# ── Clean up placeholder cert if we created one ──────────────────────────────
-if $CERT_PLACEHOLDER; then
-  rm -f "${REPO_DIR}/${CERT_DIR}/${CERT_FILE}"
-fi

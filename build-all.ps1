@@ -63,6 +63,7 @@ foreach ($stage in $Images) {
     & docker build @BuildArgs -f $dockerfile -t $tag $RepoDir
     if ($LASTEXITCODE -ne 0) {
         Write-Host "==> FAILED to build $tag" -ForegroundColor Red
+        if ($CertPlaceholder) { Remove-Item -Force $CertPath }
         exit 1
     }
 }
