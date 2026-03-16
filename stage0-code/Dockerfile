@@ -8,11 +8,6 @@ LABEL description="Stage 0 Code: Code quality & general security"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 
-# ── Corporate CA certificate (place your PEM in the build context) ───────────
-COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
-RUN update-ca-certificates
-ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
-
 # ── System packages ──────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
@@ -25,6 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     shellcheck \
     unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# ── Corporate CA certificate (place your PEM in the build context) ───────────
+COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+RUN update-ca-certificates
+ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # ── Python tools: ruff, bandit ───────────────────────────────────────────────
 RUN pip3 install --no-cache-dir --break-system-packages \
