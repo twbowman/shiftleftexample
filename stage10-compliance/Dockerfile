@@ -10,7 +10,7 @@ LABEL description="Stage 10: Compliance & Policy Enforcement"
 RUN apk add --no-cache bash jq curl docker-cli
 
 # ── Corporate CA certificate (place your PEM in the build context) ───────────
-COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
 RUN cat /usr/local/share/ca-certificates/corporate-ca.crt >> /etc/ssl/certs/ca-certificates.crt
 
 # ── Cosign ───────────────────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ RUN CONFTEST_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x86_64"
     && chmod +x /usr/local/bin/conftest \
     && rm /tmp/conftest.tar.gz
 
-COPY comply.sh /usr/local/bin/comply.sh
+COPY stage10-compliance/comply.sh /usr/local/bin/comply.sh
 RUN chmod +x /usr/local/bin/comply.sh
 
 WORKDIR /workspace

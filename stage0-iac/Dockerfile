@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Corporate CA certificate (place your PEM in the build context) ───────────
-COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
 RUN update-ca-certificates
 ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
@@ -38,7 +38,7 @@ RUN curl -fsSL "https://github.com/terraform-linters/tflint/releases/download/v$
     && chmod +x /usr/local/bin/tflint \
     && rm /tmp/tflint.zip
 
-COPY scan-iac.sh /usr/local/bin/scan-iac.sh
+COPY stage0-iac/scan-iac.sh /usr/local/bin/scan-iac.sh
 RUN chmod +x /usr/local/bin/scan-iac.sh
 
 WORKDIR /workspace

@@ -143,6 +143,17 @@ should_run() {
     return 1
 }
 
+# Build proxy env flags for docker run
+PROXY_ENV=()
+for var in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
+    if [[ -n "${!var:-}" ]]; then
+        PROXY_ENV+=(-e "${var}=${!var}")
+    fi
+done
+if [[ ${#PROXY_ENV[@]} -gt 0 ]]; then
+    echo -e "  ${DIM}Proxy:     forwarding ${#PROXY_ENV[@]} env vars into containers${RESET}"
+fi
+
 # Resolve stage image name — use registry prefix if set
 stage_image() {
     local name="$1"
@@ -196,7 +207,7 @@ if $DRY_RUN; then echo -e "  ${YELLOW}DRY RUN — no containers will execute${RE
 # ── Stage 0: Code ────────────────────────────────────────────────────────────
 if should_run "0-code"; then
     banner "Stage 0: Code Quality & Security"
-    s0_args=(-v "${REPO_PATH}":/workspace "$(stage_image stage0-code)" --path /workspace)
+    s0_args=("${PROXY_ENV[@]+"${PROXY_ENV[@]}"}" -v "${REPO_PATH}":/workspace "$(stage_image stage0-code)" --path /workspace)
     if $FIX; then s0_args+=(--fix); fi
     if $STRICT; then s0_args+=(--strict); fi
     s0_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
@@ -208,7 +219,7 @@ fi
 # ── Stage 0: IaC ─────────────────────────────────────────────────────────────
 if should_run "0-iac"; then
     banner "Stage 0: IaC Linting & Compliance"
-    s0_args=(-v "${REPO_PATH}":/workspace "$(stage_image stage0-iac)" --path /workspace)
+    s0_args=("${PROXY_ENV[@]+"${PROXY_ENV[@]}"}" -v "${REPO_PATH}":/workspace "$(stage_image stage0-iac)" --path /workspace)
     if $FIX; then s0_args+=(--fix); fi
     if $STRICT; then s0_args+=(--strict); fi
     s0_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
@@ -220,7 +231,7 @@ fi
 # ── Stage 0: PowerShell ──────────────────────────────────────────────────────
 if should_run "0-pwsh"; then
     banner "Stage 0: PowerShell Linting"
-    s0_args=(-v "${REPO_PATH}":/workspace "$(stage_image stage0-pwsh)" --path /workspace)
+    s0_args=("${PROXY_ENV[@]+"${PROXY_ENV[@]}"}" -v "${REPO_PATH}":/workspace "$(stage_image stage0-pwsh)" --path /workspace)
     if $STRICT; then s0_args+=(--strict); fi
     s0_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
     rc=0; run_docker "stage0-pwsh" "${s0_args[@]}" || rc=$?
@@ -233,6 +244,7 @@ if should_run "1"; then
     banner "Stage 1: Build"
     mkdir -p "${ARTIFACTS}/stage1"
     s1_args=(
+        "${PROXY_ENV[@]+"${PROXY_ENV[@]}"}"
         -v /var/run/docker.sock:/var/run/docker.sock
         -v "${REPO_PATH}":/workspace
         -v "${ARTIFACTS}":/artifacts
@@ -250,6 +262,7 @@ if should_run "3"; then
     banner "Stage 3: Software Composition Analysis"
     mkdir -p "${ARTIFACTS}/stage3"
     s3_args=(
+        "${PROXY_ENV[@]+"${PROXY_ENV[@]}"}"
         -v /var/run/docker.sock:/var/run/docker.sock
         -v "${REPO_PATH}":/workspace
         -v "${ARTIFACTS}":/artifacts
@@ -268,6 +281,7 @@ if should_run "9"; then
     banner "Stage 9: SBOM & Signing"
     mkdir -p "${ARTIFACTS}/stage9"
     s9_args=(
+        "${PROXY_ENV[@]+"${PROXY_ENV[@]}"}"
         -v /var/run/docker.sock:/var/run/docker.sock
         -v "${ARTIFACTS}":/artifacts
     )
@@ -295,6 +309,7 @@ if should_run "10"; then
     banner "Stage 10: Compliance & Policy"
     mkdir -p "${ARTIFACTS}/stage10"
     s10_args=(
+        "${PROXY_ENV[@]+"${PROXY_ENV[@]}"}"
         -v /var/run/docker.sock:/var/run/docker.sock
         -v "${ARTIFACTS}":/artifacts
     )

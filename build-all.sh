@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 PREFIX="shiftleft"
+CERT_DIR="certs"
 CERT_FILE="corporate-ca.crt"
 
 images=(
@@ -15,31 +16,31 @@ images=(
   "stage10-compliance"
 )
 
-# ── Distribute cert into each stage build context ────────────────────────────
-if [[ -f "${REPO_DIR}/${CERT_FILE}" ]]; then
-  echo "==> Found ${CERT_FILE}, copying into each stage directory..."
-  for stage in "${images[@]}"; do
-    cp "${REPO_DIR}/${CERT_FILE}" "${REPO_DIR}/${stage}/${CERT_FILE}"
-  done
-else
-  echo "==> WARNING: ${CERT_FILE} not found in repo root. Builds will fail."
-  echo "    Place your corporate CA PEM at: ${REPO_DIR}/${CERT_FILE}"
+# ── Distribute cert — no longer needed, Dockerfiles reference certs/ directly ─
+
+echo "==> Checking for ${CERT_DIR}/${CERT_FILE}..."
+if [[ ! -f "${REPO_DIR}/${CERT_DIR}/${CERT_FILE}" ]]; then
+  echo "==> WARNING: ${CERT_DIR}/${CERT_FILE} not found."
+  echo "    Place your corporate CA PEM at: ${REPO_DIR}/${CERT_DIR}/${CERT_FILE}"
   exit 1
 fi
+
+# ── Proxy build args (forwarded if set in environment) ───────────────────────
+BUILD_ARGS=()
+for var in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
+  if [[ -n "${!var:-}" ]]; then
+    BUILD_ARGS+=(--build-arg "${var}=${!var}")
+    echo "==> Forwarding ${var} to builds"
+  fi
+done
 
 echo "==> Building ${#images[@]} images..."
 
 for stage in "${images[@]}"; do
   tag="${PREFIX}/${stage}:latest"
-  context="${REPO_DIR}/${stage}"
   echo ""
-  echo "--- Building ${tag} from ${context} ---"
-  docker build -t "${tag}" "${context}"
-done
-
-# ── Clean up copied certs ────────────────────────────────────────────────────
-for stage in "${images[@]}"; do
-  rm -f "${REPO_DIR}/${stage}/${CERT_FILE}"
+  echo "--- Building ${tag} (context: repo root, dockerfile: ${stage}/Dockerfile) ---"
+  docker build "${BUILD_ARGS[@]+"${BUILD_ARGS[@]}"}" -f "${REPO_DIR}/${stage}/Dockerfile" -t "${tag}" "${REPO_DIR}"
 done
 
 echo ""

@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Corporate CA certificate (place your PEM in the build context) ───────────
-COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
 RUN update-ca-certificates
 ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
@@ -46,7 +46,7 @@ RUN curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEA
     && chmod +x /usr/local/bin/gitleaks \
     && rm /tmp/gitleaks.tar.gz
 
-COPY scan-code.sh /usr/local/bin/scan-code.sh
+COPY stage0-code/scan-code.sh /usr/local/bin/scan-code.sh
 RUN chmod +x /usr/local/bin/scan-code.sh
 
 WORKDIR /workspace

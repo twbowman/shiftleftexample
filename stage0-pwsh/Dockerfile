@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Corporate CA certificate (place your PEM in the build context) ───────────
-COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
 RUN update-ca-certificates
 
 # ── PowerShell Core + PSScriptAnalyzer ───────────────────────────────────────
@@ -32,7 +32,7 @@ RUN PS_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x64") \
     && rm /tmp/powershell.tar.gz \
     && pwsh -NoProfile -NonInteractive -Command "Install-Module -Name PSScriptAnalyzer -Scope AllUsers -Force -SkipPublisherCheck"
 
-COPY scan-pwsh.sh /usr/local/bin/scan-pwsh.sh
+COPY stage0-pwsh/scan-pwsh.sh /usr/local/bin/scan-pwsh.sh
 RUN chmod +x /usr/local/bin/scan-pwsh.sh
 
 WORKDIR /workspace

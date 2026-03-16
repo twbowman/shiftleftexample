@@ -11,7 +11,7 @@ ARG COSIGN_VERSION=2.4.1
 RUN apk add --no-cache bash jq docker-cli curl
 
 # ── Corporate CA certificate (place your PEM in the build context) ───────────
-COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
 RUN cat /usr/local/share/ca-certificates/corporate-ca.crt >> /etc/ssl/certs/ca-certificates.crt
 
 # ── Trivy from official image ────────────────────────────────────────────────
@@ -22,7 +22,7 @@ RUN curl -fsSL "https://github.com/sigstore/cosign/releases/download/v${COSIGN_V
     -o /usr/local/bin/cosign \
     && chmod +x /usr/local/bin/cosign
 
-COPY sbom-sign.sh /usr/local/bin/sbom-sign.sh
+COPY stage9-sbom/sbom-sign.sh /usr/local/bin/sbom-sign.sh
 RUN chmod +x /usr/local/bin/sbom-sign.sh
 
 WORKDIR /workspace

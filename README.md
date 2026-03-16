@@ -36,15 +36,27 @@ Stages 0-code, 0-iac, and 0-pwsh are designed to run in parallel.
 
 ### Build all stage images
 
+Place your corporate CA certificate (PEM format) at `certs/corporate-ca.crt`, then:
+
 ```bash
-docker build -t stage0-code  ./stage0-code
-docker build -t stage0-iac   ./stage0-iac
-docker build -t stage0-pwsh  ./stage0-pwsh
-docker build -t stage1-build ./stage1-build
-docker build -t stage3-sca   ./stage3-sca
-docker build -t stage9-sbom  ./stage9-sbom
-docker build -t stage10-compliance ./stage10-compliance
+./build-all.sh
 ```
+
+This copies the cert into each stage's build context, builds all images with the `shiftleft/` prefix, and cleans up after. If `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` are set in your environment, they are forwarded as build args automatically.
+
+You can also build individually from the repo root:
+
+```bash
+docker build -f stage0-code/Dockerfile -t stage0-code .
+docker build -f stage0-iac/Dockerfile -t stage0-iac .
+docker build -f stage0-pwsh/Dockerfile -t stage0-pwsh .
+docker build -f stage1-build/Dockerfile -t stage1-build .
+docker build -f stage3-sca/Dockerfile -t stage3-sca .
+docker build -f stage9-sbom/Dockerfile -t stage9-sbom .
+docker build -f stage10-compliance/Dockerfile -t stage10-compliance .
+```
+
+> **Note:** All builds must use the repo root as the build context (`.`) so Dockerfiles can access `certs/corporate-ca.crt`.
 
 ### Run the full pipeline
 
@@ -105,6 +117,40 @@ docker build -t stage10-compliance ./stage10-compliance
 # Dry run to preview
 ./pipeline.sh --dry-run
 ```
+
+---
+
+## Corporate Network / Proxy
+
+If you're behind a corporate proxy or firewall with TLS interception, two things are needed:
+
+### 1. CA Certificate
+
+All Dockerfiles expect a `corporate-ca.crt` file in their build context. The `build-all.sh` script handles distributing it from the central `certs/` directory:
+
+```
+certs/
+└── corporate-ca.crt    # Your corporate root CA (PEM format)
+```
+
+- Ubuntu images: installed via `update-ca-certificates`
+- Alpine images: appended to `/etc/ssl/certs/ca-certificates.crt`
+- pip-using images also set `PIP_CERT` to the system bundle
+
+The cert is baked into the images at build time, so runtime tools (Trivy, checkov, curl, etc.) will trust your corporate CA automatically.
+
+### 2. Proxy Environment Variables
+
+Set these in your shell before running `build-all.sh` or the pipeline scripts:
+
+```bash
+export HTTP_PROXY=http://proxy.corp.example.com:8080
+export HTTPS_PROXY=http://proxy.corp.example.com:8080
+export NO_PROXY=localhost,127.0.0.1,.corp.example.com
+```
+
+- `build-all.sh` forwards them as `--build-arg` to `docker build`
+- `pipeline.sh` / `pipeline.ps1` forward them as `-e` flags to `docker run`
 
 ---
 

@@ -150,6 +150,16 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {
     }
 }
 
+# ── Proxy env flags for docker run ────────────────────────────────────────────
+$ProxyEnv = @()
+foreach ($var in @("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy")) {
+    $val = [System.Environment]::GetEnvironmentVariable($var)
+    if ($val) { $ProxyEnv += @("-e", "${var}=${val}") }
+}
+if ($ProxyEnv.Count -gt 0) {
+    Write-Host "  Proxy:     forwarding $($ProxyEnv.Count / 2) env vars into containers" -ForegroundColor DarkGray
+}
+
 # ── Pipeline Start ───────────────────────────────────────────────────────────
 $PipelineStart = Get-Date
 
@@ -165,7 +175,7 @@ if ($DryRun)   { Write-Host "  DRY RUN — no containers will execute" -Foregrou
 # ── Stage 0: Code ────────────────────────────────────────────────────────────
 if (Test-ShouldRun "0-code") {
     Write-Banner "Stage 0: Code Quality & Security"
-    $args = @("-v", "${RepoPath}:/workspace", (Get-StageImage "stage0-code"), "--path", "/workspace")
+    $args = @($ProxyEnv) + @("-v", "${RepoPath}:/workspace", (Get-StageImage "stage0-code"), "--path", "/workspace")
     if ($Fix)    { $args += "--fix" }
     if ($Strict) { $args += "--strict" }
     Invoke-Stage "stage0-code" $args
@@ -174,7 +184,7 @@ if (Test-ShouldRun "0-code") {
 # ── Stage 0: IaC ─────────────────────────────────────────────────────────────
 if (Test-ShouldRun "0-iac") {
     Write-Banner "Stage 0: IaC Linting & Compliance"
-    $args = @("-v", "${RepoPath}:/workspace", (Get-StageImage "stage0-iac"), "--path", "/workspace")
+    $args = @($ProxyEnv) + @("-v", "${RepoPath}:/workspace", (Get-StageImage "stage0-iac"), "--path", "/workspace")
     if ($Fix)    { $args += "--fix" }
     if ($Strict) { $args += "--strict" }
     Invoke-Stage "stage0-iac" $args
@@ -183,7 +193,7 @@ if (Test-ShouldRun "0-iac") {
 # ── Stage 0: PowerShell ──────────────────────────────────────────────────────
 if (Test-ShouldRun "0-pwsh") {
     Write-Banner "Stage 0: PowerShell Linting"
-    $args = @("-v", "${RepoPath}:/workspace", (Get-StageImage "stage0-pwsh"), "--path", "/workspace")
+    $args = @($ProxyEnv) + @("-v", "${RepoPath}:/workspace", (Get-StageImage "stage0-pwsh"), "--path", "/workspace")
     if ($Strict) { $args += "--strict" }
     Invoke-Stage "stage0-pwsh" $args
 }
@@ -192,7 +202,7 @@ if (Test-ShouldRun "0-pwsh") {
 if (Test-ShouldRun "1") {
     Write-Banner "Stage 1: Build"
     New-Item -ItemType Directory -Force -Path "$ArtifactsPath/stage1" | Out-Null
-    $args = @(
+    $args = @($ProxyEnv) + @(
         "-v", "/var/run/docker.sock:/var/run/docker.sock",
         "-v", "${RepoPath}:/workspace",
         "-v", "${ArtifactsPath}:/artifacts",
@@ -206,7 +216,7 @@ if (Test-ShouldRun "1") {
 if (Test-ShouldRun "3") {
     Write-Banner "Stage 3: Software Composition Analysis"
     New-Item -ItemType Directory -Force -Path "$ArtifactsPath/stage3" | Out-Null
-    $args = @(
+    $args = @($ProxyEnv) + @(
         "-v", "/var/run/docker.sock:/var/run/docker.sock",
         "-v", "${RepoPath}:/workspace",
         "-v", "${ArtifactsPath}:/artifacts",
@@ -221,7 +231,7 @@ if (Test-ShouldRun "3") {
 if (Test-ShouldRun "9") {
     Write-Banner "Stage 9: SBOM & Signing"
     New-Item -ItemType Directory -Force -Path "$ArtifactsPath/stage9" | Out-Null
-    $args = @(
+    $args = @($ProxyEnv) + @(
         "-v", "/var/run/docker.sock:/var/run/docker.sock",
         "-v", "${ArtifactsPath}:/artifacts"
     )
@@ -247,7 +257,7 @@ if (Test-ShouldRun "9") {
 if (Test-ShouldRun "10") {
     Write-Banner "Stage 10: Compliance & Policy"
     New-Item -ItemType Directory -Force -Path "$ArtifactsPath/stage10" | Out-Null
-    $args = @(
+    $args = @($ProxyEnv) + @(
         "-v", "/var/run/docker.sock:/var/run/docker.sock",
         "-v", "${ArtifactsPath}:/artifacts"
     )

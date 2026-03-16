@@ -6,12 +6,12 @@ LABEL description="Stage 3: Software Composition Analysis with Trivy"
 USER root
 
 # ── Corporate CA certificate (place your PEM in the build context) ───────────
-COPY corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
+COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
 RUN cat /usr/local/share/ca-certificates/corporate-ca.crt >> /etc/ssl/certs/ca-certificates.crt
 
 RUN apk add --no-cache bash jq docker-cli
 
-COPY scan.sh /usr/local/bin/scan.sh
+COPY stage3-sca/scan.sh /usr/local/bin/scan.sh
 RUN chmod +x /usr/local/bin/scan.sh
 
 WORKDIR /workspace
