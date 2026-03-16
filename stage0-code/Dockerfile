@@ -52,7 +52,8 @@ RUN HADOLINT_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x86_64"
 
 # ── gitleaks ─────────────────────────────────────────────────────────────────
 ARG GITLEAKS_VERSION=8.21.2
-RUN curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${TARGETARCH}.tar.gz" \
+RUN GITLEAKS_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x64") \
+    && curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${GITLEAKS_ARCH}.tar.gz" \
     -o /tmp/gitleaks.tar.gz \
     && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
     && chmod +x /usr/local/bin/gitleaks \
