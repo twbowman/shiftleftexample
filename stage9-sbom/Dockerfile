@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY certs/corporate-ca.crt /usr/local/share/ca-certificates/corporate-ca.crt
 RUN if [ -s /usr/local/share/ca-certificates/corporate-ca.crt ]; then update-ca-certificates; fi
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 # ── Docker CLI ───────────────────────────────────────────────────────────────
 ARG DOCKER_VERSION=27.4.1

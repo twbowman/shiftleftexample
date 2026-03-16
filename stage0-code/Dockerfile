@@ -27,6 +27,7 @@ RUN if [ -s /usr/local/share/ca-certificates/corporate-ca.crt ]; then update-ca-
 ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 # ── Python tools: ruff, bandit ───────────────────────────────────────────────
 RUN pip3 install --no-cache-dir --break-system-packages \
