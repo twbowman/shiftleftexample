@@ -3,7 +3,7 @@
     Build all pipeline stage Docker images locally.
 .DESCRIPTION
     Builds all stage images using each stage directory as the build context.
-    Copies the corporate CA cert into each stage's certs/ directory before building.
+    Each stage is expected to have its own certs/ directory with the corporate CA cert.
     Forwards proxy environment variables as build args if set.
 .PARAMETER Prefix
     Image name prefix (default: DockerShiftLeft). Images are tagged as prefix/stage:latest.
@@ -21,8 +21,6 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$CertDir = "certs"
-$CertFile = "corporate-ca.crt"
 
 $Images = @(
     "stage0-code",
@@ -33,16 +31,6 @@ $Images = @(
     "stage9-sbom",
     "stage10-compliance"
 )
-
-# Check for corporate CA cert
-$CertSrc = Join-Path $RepoDir (Join-Path $CertDir $CertFile)
-$HasCert = $false
-if ((Test-Path $CertSrc) -and ((Get-Item $CertSrc).Length -gt 0)) {
-    Write-Host "==> Found $CertDir\$CertFile"
-    $HasCert = $true
-} else {
-    Write-Host "==> NOTE: $CertDir\$CertFile not found - building without corporate CA cert." -ForegroundColor Yellow
-}
 
 # Proxy build args (forwarded if set in environment)
 $BuildArgs = New-Object System.Collections.ArrayList
@@ -85,18 +73,6 @@ Write-Host "==> Building $($Images.Count) images..."
 foreach ($stage in $Images) {
     $tag = "$Prefix/${stage}:latest"
     $stageDir = Join-Path $RepoDir $stage
-    $stageCertDir = Join-Path $stageDir $CertDir
-
-    # Copy cert into stage's certs/ directory (or create empty placeholder)
-    if (-not (Test-Path $stageCertDir)) {
-        New-Item -ItemType Directory -Force -Path $stageCertDir | Out-Null
-    }
-    $stageCertFile = Join-Path $stageCertDir $CertFile
-    if ($HasCert) {
-        Copy-Item -Path $CertSrc -Destination $stageCertFile -Force
-    } else {
-        New-Item -ItemType File -Force -Path $stageCertFile | Out-Null
-    }
 
     Write-Host ""
     Write-Host "--- Building $tag (context: $stage/) ---"
@@ -111,19 +87,8 @@ foreach ($stage in $Images) {
     & docker $cmdArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Host "==> FAILED to build $tag" -ForegroundColor Red
-        # Clean up stage certs
-        foreach ($s in $Images) {
-            $cleanDir = Join-Path (Join-Path $RepoDir $s) $CertDir
-            if (Test-Path $cleanDir) { Remove-Item -Recurse -Force $cleanDir }
-        }
         exit 1
     }
-}
-
-# Clean up stage certs
-foreach ($stage in $Images) {
-    $cleanDir = Join-Path (Join-Path $RepoDir $stage) $CertDir
-    if (Test-Path $cleanDir) { Remove-Item -Recurse -Force $cleanDir }
 }
 
 Write-Host ""

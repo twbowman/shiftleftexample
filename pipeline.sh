@@ -15,7 +15,7 @@
 #   -t, --tag <tag>           Image tag for stage 1 build (default: <target-name>:latest)
 #   -p, --prefix <prefix>    Image name prefix (e.g. shiftleft -> shiftleft/stage0-code)
 #   -R, --registry <url>      Container registry for images (e.g. jfrog.io/docker-local)
-#   -o, --output <dir>        Artifacts directory (default: ./artifacts)
+#   -o, --output <dir>        Artifacts directory (default: <target>/artifacts)
 #   --fix                     Pass --fix to stage 0 scripts
 #   --strict                  Pass --strict to all stages
 #   --fail-on <severity>      Pass --fail-on to stage 3 (e.g. CRITICAL)
@@ -55,7 +55,7 @@ STAGES="all"
 IMAGE_TAG=""
 IMAGE_PREFIX="DockerShiftLeft"
 REGISTRY=""
-ARTIFACTS="./artifacts"
+ARTIFACTS=""
 FIX=false
 STRICT=false
 FAIL_ON=""
@@ -128,6 +128,11 @@ cleanup() {
 trap cleanup EXIT
 
 resolve_target
+
+# Default artifacts to <target>/artifacts if not explicitly set
+if [[ -z "$ARTIFACTS" ]]; then
+    ARTIFACTS="${REPO_PATH}/artifacts"
+fi
 mkdir -p "$ARTIFACTS"
 ARTIFACTS="$(cd "$ARTIFACTS" && pwd)"
 

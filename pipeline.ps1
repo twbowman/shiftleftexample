@@ -16,7 +16,7 @@
 .PARAMETER Registry
     Container registry for images (e.g. jfrog.io/docker-local).
 .PARAMETER Output
-    Artifacts directory (default: ./artifacts).
+    Artifacts directory (default: <target>/artifacts).
 .PARAMETER Fix
     Pass --fix to stage 0 scripts.
 .PARAMETER Strict
@@ -52,7 +52,7 @@ param(
     [string]$Tag = "",
     [string]$Prefix = "DockerShiftLeft",
     [string]$Registry = "",
-    [string]$Output = "./artifacts",
+    [string]$Output = "",
     [switch]$Fix,
     [switch]$Strict,
     [string]$FailOn = "",
@@ -106,7 +106,9 @@ function Invoke-Stage {
     }
 
     Write-Host "  >> $Name" -ForegroundColor White
-    $logFile = Join-Path $ArtifactsPath "$Name.log"
+    $logDir = Join-Path $ArtifactsPath "logs"
+    if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+    $logFile = Join-Path $logDir "$Name.log"
     $rc = 0
     try {
         $runArgs = New-Object System.Collections.ArrayList
@@ -169,6 +171,11 @@ if (-not $Target) {
     }
 } else {
     $RepoPath = (Resolve-Path $Target).Path
+}
+
+# Default artifacts to <target>/artifacts if not explicitly set
+if (-not $Output) {
+    $Output = Join-Path $RepoPath "artifacts"
 }
 
 # Ensure artifacts dir exists and is absolute
