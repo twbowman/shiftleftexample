@@ -50,7 +50,7 @@ RUN TRIVY_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "ARM64" || echo "64bit") \
     && rm /tmp/trivy.tar.gz
 
 COPY stage3-sca/scan.sh /usr/local/bin/scan.sh
-RUN chmod +x /usr/local/bin/scan.sh
+RUN sed -i 's/\r$//' /usr/local/bin/scan.sh && chmod +x /usr/local/bin/scan.sh
 
 WORKDIR /workspace
 

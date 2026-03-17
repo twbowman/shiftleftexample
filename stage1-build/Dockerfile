@@ -41,7 +41,7 @@ RUN DOCKER_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "x86_64"
     && rm /tmp/docker.tgz
 
 COPY stage1-build/build.sh /usr/local/bin/build.sh
-RUN chmod +x /usr/local/bin/build.sh
+RUN sed -i 's/\r$//' /usr/local/bin/build.sh && chmod +x /usr/local/bin/build.sh
 
 WORKDIR /workspace
 

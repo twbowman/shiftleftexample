@@ -56,7 +56,7 @@ RUN CONFTEST_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x86_64"
     && rm /tmp/conftest.tar.gz
 
 COPY stage10-compliance/comply.sh /usr/local/bin/comply.sh
-RUN chmod +x /usr/local/bin/comply.sh
+RUN sed -i 's/\r$//' /usr/local/bin/comply.sh && chmod +x /usr/local/bin/comply.sh
 
 WORKDIR /workspace
 

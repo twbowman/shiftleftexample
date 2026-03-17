@@ -44,7 +44,7 @@ RUN PS_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x64") \
     && pwsh -NoProfile -NonInteractive -Command "Install-Module -Name PSScriptAnalyzer -Scope AllUsers -Force -SkipPublisherCheck"
 
 COPY stage0-pwsh/scan-pwsh.sh /usr/local/bin/scan-pwsh.sh
-RUN chmod +x /usr/local/bin/scan-pwsh.sh
+RUN sed -i 's/\r$//' /usr/local/bin/scan-pwsh.sh && chmod +x /usr/local/bin/scan-pwsh.sh
 
 WORKDIR /workspace
 

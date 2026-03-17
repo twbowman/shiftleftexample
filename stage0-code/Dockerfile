@@ -60,7 +60,7 @@ RUN GITLEAKS_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "x64") \
     && rm /tmp/gitleaks.tar.gz
 
 COPY stage0-code/scan-code.sh /usr/local/bin/scan-code.sh
-RUN chmod +x /usr/local/bin/scan-code.sh
+RUN sed -i 's/\r$//' /usr/local/bin/scan-code.sh && chmod +x /usr/local/bin/scan-code.sh
 
 WORKDIR /workspace
 

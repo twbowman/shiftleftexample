@@ -56,7 +56,7 @@ RUN curl -fsSL "https://github.com/sigstore/cosign/releases/download/v${COSIGN_V
     && chmod +x /usr/local/bin/cosign
 
 COPY stage9-sbom/sbom-sign.sh /usr/local/bin/sbom-sign.sh
-RUN chmod +x /usr/local/bin/sbom-sign.sh
+RUN sed -i 's/\r$//' /usr/local/bin/sbom-sign.sh && chmod +x /usr/local/bin/sbom-sign.sh
 
 WORKDIR /workspace
 

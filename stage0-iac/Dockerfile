@@ -51,7 +51,7 @@ RUN curl -fsSL "https://github.com/terraform-linters/tflint/releases/download/v$
     && rm /tmp/tflint.zip
 
 COPY stage0-iac/scan-iac.sh /usr/local/bin/scan-iac.sh
-RUN chmod +x /usr/local/bin/scan-iac.sh
+RUN sed -i 's/\r$//' /usr/local/bin/scan-iac.sh && chmod +x /usr/local/bin/scan-iac.sh
 
 WORKDIR /workspace
 
