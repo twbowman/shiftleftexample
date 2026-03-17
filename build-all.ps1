@@ -63,6 +63,17 @@ foreach ($var in @("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https
 
 Write-Host "==> Building $($Images.Count) images..."
 
+# Fix Windows CRLF line endings for files that will run inside Linux containers
+Write-Host "==> Converting line endings to LF for Linux compatibility..."
+Get-ChildItem -Path $RepoDir -Recurse -Include "*.sh","*.bash","*.zsh","Dockerfile" | ForEach-Object {
+    $content = [System.IO.File]::ReadAllText($_.FullName)
+    if ($content -match "`r`n") {
+        $content = $content -replace "`r`n", "`n"
+        [System.IO.File]::WriteAllText($_.FullName, $content)
+        Write-Host "     Fixed: $($_.FullName)" -ForegroundColor DarkGray
+    }
+}
+
 foreach ($stage in $Images) {
     $tag = "$Prefix/${stage}:latest"
     $dockerfile = Join-Path $RepoDir (Join-Path $stage "Dockerfile")

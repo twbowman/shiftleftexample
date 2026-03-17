@@ -2,6 +2,13 @@
 *.sh text eol=lf
 *.bash text eol=lf
 *.zsh text eol=lf
+Dockerfile text eol=lf
+Dockerfile.* text eol=lf
+*.dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.cfg text eol=lf
+*.rego text eol=lf
 
 # PowerShell can handle either, but keep consistent
 *.ps1 text eol=crlf
