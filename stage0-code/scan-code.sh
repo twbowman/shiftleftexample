@@ -110,7 +110,7 @@ if [[ ${#PYTHON_FILES[@]} -gt 0 ]]; then
     run_tool "ruff" "Python" "ruff" "${local_ruff_args[@]}"
 
     if $FIX; then run_tool "ruff-format" "Python" "ruff" format "$SCAN_PATH"
-    else run_tool "ruff-format" "Python" "ruff" format --check "$SCAN_PATH"; fi
+    else run_tool "ruff-format" "Python" "ruff" format --check --diff "$SCAN_PATH"; fi
 
     run_tool "bandit" "Python" "bandit" -r "$SCAN_PATH" -f custom --severity-level medium -q
 fi

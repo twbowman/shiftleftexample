@@ -209,7 +209,6 @@ check_abort() {
         exit $EXIT_CODE
     fi
 }
-}
 
 # ── Pipeline Start ───────────────────────────────────────────────────────────
 PIPELINE_START=$SECONDS

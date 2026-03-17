@@ -113,20 +113,17 @@ function Invoke-Stage {
         [void]$runArgs.Add("run")
         [void]$runArgs.Add("--rm")
         foreach ($a in $DockerArgs) { [void]$runArgs.Add($a) }
-        $argString = ($runArgs | ForEach-Object {
-            if ($_ -match '\s') { "`"$_`"" } else { $_ }
-        }) -join " "
-        $proc = Start-Process -FilePath "docker" -ArgumentList $argString -NoNewWindow -Wait -PassThru -RedirectStandardOutput $logFile -RedirectStandardError "$logFile.err"
-        $rc = $proc.ExitCode
-        # Merge stderr into log
-        if (Test-Path "$logFile.err") {
-            Get-Content "$logFile.err" | Add-Content $logFile
-            Remove-Item "$logFile.err" -Force
+        $output = & docker $runArgs 2>&1
+        $rc = $LASTEXITCODE
+        # Write to console and log file
+        $logLines = New-Object System.Collections.ArrayList
+        foreach ($line in $output) {
+            $text = "$line"
+            Write-Host "  $text"
+            [void]$logLines.Add($text)
         }
-        # Display log to console
-        if (Test-Path $logFile) {
-            Get-Content $logFile | ForEach-Object { Write-Host "  $_" }
-        }
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllLines($logFile, $logLines.ToArray(), $utf8NoBom)
         Write-Host ""
         Write-Host "  Log saved to: $logFile" -ForegroundColor DarkGray
     } catch {
