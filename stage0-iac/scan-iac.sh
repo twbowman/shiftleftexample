@@ -64,9 +64,19 @@ run_tool() {
     if is_skipped "$tool_name"; then add_result "$tool_name" "$language" "Skipped"; echo -e "  ${YELLOW}⏭  ${tool_name} skipped${RESET}"; return; fi
     if ! tool_available "$cmd"; then add_result "$tool_name" "$language" "NotInstalled" "'${cmd}' not found"; echo -e "  ${YELLOW}⚠  ${tool_name} not installed${RESET}"; return; fi
     echo -e "  ${WHITE}▶  Running ${tool_name}...${RESET}"
-    local rc=0; set +e; "$cmd" "${args[@]}" 2>&1 | sed 's/^/     /'; rc=${PIPESTATUS[0]}; set -e
-    if [[ $rc -ne 0 ]]; then add_result "$tool_name" "$language" "Fail" "Exit code: ${rc}"; echo -e "  ${RED}✗  ${tool_name} failed (exit ${rc})${RESET}"
-    else add_result "$tool_name" "$language" "Pass"; echo -e "  ${GREEN}✓  ${tool_name} passed${RESET}"; fi
+    local output_file; output_file=$(mktemp)
+    local rc=0; set +e; "$cmd" "${args[@]}" > "$output_file" 2>&1; rc=$?; set -e
+    cat "$output_file" | sed 's/^/     /'
+    if [[ $rc -ne 0 ]]; then
+        echo -e "  ${RED}✗  ${tool_name} failed (exit ${rc})${RESET}"
+        echo -e "  ${RED}--- ${tool_name} output ---${RESET}"
+        cat "$output_file" | sed 's/^/     /'
+        echo -e "  ${RED}--- end ${tool_name} output ---${RESET}"
+        add_result "$tool_name" "$language" "Fail" "Exit code: ${rc}"
+    else
+        add_result "$tool_name" "$language" "Pass"; echo -e "  ${GREEN}✓  ${tool_name} passed${RESET}"
+    fi
+    rm -f "$output_file"
 }
 find_files() {
     local base="$1"; shift; local patterns=("$@") results=()
