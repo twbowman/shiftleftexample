@@ -31,29 +31,34 @@ Stages 0-code, 0-iac, and 0-pwsh are designed to run in parallel.
 
 ### Prerequisites
 
-- Docker (via [Rancher Desktop](https://rancherdesktop.io) or Docker Desktop)
-- bash or PowerShell Core (pwsh)
+- Docker (via Docker Desktop on Windows, OrbStack on macOS, or Docker Engine on Linux)
+- bash or PowerShell 5.1+
 
 ### Build all stage images
 
 Place your corporate CA certificate (PEM format) at `certs/corporate-ca.crt`, then:
 
 ```bash
+# Bash (macOS/Linux)
 ./build-all.sh
+
+# PowerShell (Windows)
+.\build-all.ps1
 ```
 
-This copies the cert into each stage's build context, builds all images with the `shiftleft/` prefix, and cleans up after. If `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` are set in your environment, they are forwarded as build args automatically.
+Images are tagged with the `DockerShiftLeft/` prefix by default (e.g. `DockerShiftLeft/stage0-code:latest`). Override with:
+
+```bash
+./build-all.sh --prefix myproject
+.\build-all.ps1 -Prefix myproject
+```
+
+If `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` are set in your environment, they are forwarded as build args automatically.
 
 You can also build individually from the repo root:
 
 ```bash
-docker build -f stage0-code/Dockerfile -t stage0-code .
-docker build -f stage0-iac/Dockerfile -t stage0-iac .
-docker build -f stage0-pwsh/Dockerfile -t stage0-pwsh .
-docker build -f stage1-build/Dockerfile -t stage1-build .
-docker build -f stage3-sca/Dockerfile -t stage3-sca .
-docker build -f stage9-sbom/Dockerfile -t stage9-sbom .
-docker build -f stage10-compliance/Dockerfile -t stage10-compliance .
+docker build -f stage0-code/Dockerfile -t DockerShiftLeft/stage0-code:latest .
 ```
 
 > **Note:** All builds must use the repo root as the build context (`.`) so Dockerfiles can access `certs/corporate-ca.crt`.
@@ -65,8 +70,10 @@ docker build -f stage10-compliance/Dockerfile -t stage10-compliance .
 ./pipeline.sh --target ./myapp --tag myapp:1.0.0
 
 # PowerShell
-./pipeline.ps1 -Target ./myapp -Tag myapp:1.0.0
+.\pipeline.ps1 -Target ./myapp -Tag myapp:1.0.0
 ```
+
+The pipeline stops on the first stage failure by default. Use `--continue` (bash) or `-ContinueOnFail` (PowerShell) to run all stages regardless.
 
 ---
 
@@ -81,6 +88,7 @@ docker build -f stage10-compliance/Dockerfile -t stage10-compliance .
 | `--target <path\|url>` | `-Target` | Local path or git URL to scan |
 | `--stage <list>` | `-Stage` | Comma-separated stages (default: `all`) |
 | `--tag <tag>` | `-Tag` | Image tag for build/scan (default: `app:latest`) |
+| `--prefix <prefix>` | `-Prefix` | Image name prefix (default: `DockerShiftLeft`) |
 | `--registry <url>` | `-Registry` | Container registry (e.g. `jfrog.io/docker-local`) |
 | `--output <dir>` | `-Output` | Artifacts directory (default: `./artifacts`) |
 | `--fix` | `-Fix` | Apply auto-fixes (ruff, tflint) |
@@ -90,6 +98,7 @@ docker build -f stage10-compliance/Dockerfile -t stage10-compliance .
 | `--keyless` | `-Keyless` | Keyless signing via Sigstore/Fulcio |
 | `--key <path>` | `-Key` | Cosign private key for signing |
 | `--skip-verify` | `-SkipVerify` | Skip signature verification in stage 10 |
+| `--continue` | `-ContinueOnFail` | Continue running stages after a failure |
 | `--dry-run` | `-DryRun` | Preview commands without executing |
 
 ### Valid stage values
@@ -114,6 +123,12 @@ docker build -f stage10-compliance/Dockerfile -t stage10-compliance .
 # Auto-fix code issues
 ./pipeline.sh --stage 0-code --target ./myapp --fix
 
+# Use custom image prefix
+./pipeline.sh --prefix myproject --stage 0-code
+
+# Run all stages even if one fails
+./pipeline.sh --continue
+
 # Dry run to preview
 ./pipeline.sh --dry-run
 ```
@@ -126,18 +141,25 @@ If you're behind a corporate proxy or firewall with TLS interception, two things
 
 ### 1. CA Certificate
 
-All Dockerfiles expect a `corporate-ca.crt` file in their build context. The `build-all.sh` script handles distributing it from the central `certs/` directory:
+All Dockerfiles expect a `corporate-ca.crt` file in the `certs/` directory:
 
 ```
 certs/
-└── corporate-ca.crt    # Your corporate root CA (PEM format)
+└── corporate-ca.crt    # Your corporate CA bundle (PEM format)
 ```
 
-- Ubuntu images: installed via `update-ca-certificates`
-- Alpine images: appended to `/etc/ssl/certs/ca-certificates.crt`
-- pip-using images also set `PIP_CERT` to the system bundle
+The cert file can contain multiple certificates (a full corporate CA bundle). During the Docker build, each certificate is validated with `openssl` and only non-expired certs are appended to the system trust store at `/etc/ssl/certs/ca-certificates.crt`.
 
-The cert is baked into the images at build time, so runtime tools (Trivy, checkov, curl, etc.) will trust your corporate CA automatically.
+The following environment variables are set in all images to ensure tools use the system bundle:
+
+| Variable | Set in | Purpose |
+|----------|--------|---------|
+| `SSL_CERT_FILE` | All images | OpenSSL / generic TLS |
+| `CURL_CA_BUNDLE` | All images | curl |
+| `PIP_CERT` | Python images | pip |
+| `REQUESTS_CA_BUNDLE` | Python images | Python requests library |
+
+If `certs/corporate-ca.crt` is not present, the build scripts create an empty placeholder so builds succeed without a cert.
 
 ### 2. Proxy Environment Variables
 
@@ -149,8 +171,17 @@ export HTTPS_PROXY=http://proxy.corp.example.com:8080
 export NO_PROXY=localhost,127.0.0.1,.corp.example.com
 ```
 
-- `build-all.sh` forwards them as `--build-arg` to `docker build`
+- `build-all.sh` / `build-all.ps1` forward them as `--build-arg` to `docker build`
 - `pipeline.sh` / `pipeline.ps1` forward them as `-e` flags to `docker run`
+
+---
+
+## Windows / Cross-Platform Notes
+
+- All shell scripts (`.sh`) and Dockerfiles are forced to LF line endings via `.gitattributes`
+- `build-all.ps1` automatically converts CRLF to LF for all shell scripts and Dockerfiles before building, so builds work correctly even if git checks out files with Windows line endings
+- Each Dockerfile also runs `sed -i 's/\r$//'` on its entrypoint script as a safety net
+- PowerShell scripts (`.ps1`) are compatible with PowerShell 5.1 (Windows built-in) and PowerShell 7+
 
 ---
 
@@ -185,13 +216,10 @@ docker login your-instance.jfrog.io
 
 # Push images
 REGISTRY=your-instance.jfrog.io/docker-local
-docker tag stage0-code ${REGISTRY}/stage0-code && docker push ${REGISTRY}/stage0-code
-docker tag stage0-iac  ${REGISTRY}/stage0-iac  && docker push ${REGISTRY}/stage0-iac
-docker tag stage0-pwsh ${REGISTRY}/stage0-pwsh && docker push ${REGISTRY}/stage0-pwsh
-docker tag stage1-build ${REGISTRY}/stage1-build && docker push ${REGISTRY}/stage1-build
-docker tag stage3-sca  ${REGISTRY}/stage3-sca  && docker push ${REGISTRY}/stage3-sca
-docker tag stage9-sbom ${REGISTRY}/stage9-sbom && docker push ${REGISTRY}/stage9-sbom
-docker tag stage10-compliance ${REGISTRY}/stage10-compliance && docker push ${REGISTRY}/stage10-compliance
+for stage in stage0-code stage0-iac stage0-pwsh stage1-build stage3-sca stage9-sbom stage10-compliance; do
+  docker tag DockerShiftLeft/${stage} ${REGISTRY}/${stage}
+  docker push ${REGISTRY}/${stage}
+done
 
 # Run pipeline using registry images
 ./pipeline.sh --registry ${REGISTRY} --target ./myapp --tag myapp:1.0.0
@@ -202,34 +230,6 @@ For stage 9 JFrog credentials, create a `.secrets` file (see `stage9-sbom/.secre
 ```
 JFROG_USER=your-username
 JFROG_TOKEN=your-api-token
-```
-
----
-
-## GitHub Actions
-
-```yaml
-jobs:
-  stage0:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        stage: [stage0-code, stage0-iac, stage0-pwsh]
-    steps:
-      - uses: actions/checkout@v4
-      - run: docker run --rm -v ${{ github.workspace }}:/workspace ${{ matrix.stage }}
-
-  stage1:
-    needs: stage0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: |
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${{ github.workspace }}:/workspace \
-            -v ${{ github.workspace }}/artifacts:/artifacts \
-            stage1-build --tag ${{ github.repository }}:${{ github.sha }} --output /artifacts/stage1
 ```
 
 ---
@@ -250,9 +250,9 @@ Add custom `.rego` files to enforce additional compliance requirements.
 
 ## Tool Selection Notes
 
-- **bandit** is used for Python security scanning instead of semgrep. Semgrep adds ~400MB to the image with minimal benefit for Python-only scanning. Semgrep is the better choice if you need multi-language SAST or custom taint-tracking rules.
+- **bandit** is used for Python security scanning instead of semgrep. Semgrep adds ~400MB to the image with minimal benefit for Python-only scanning.
 - **Trivy** covers both SCA (stage 3) and SBOM generation (stage 9), replacing the Grype + Syft combination for simplicity.
-- **checkov** is kept in the IaC image despite its size (~500MB) because it provides ~3,000 cloud compliance policies with CIS/SOC2/HIPAA mapping that semgrep cannot replicate.
+- **checkov** is kept in the IaC image despite its size (~500MB) because it provides ~3,000 cloud compliance policies with CIS/SOC2/HIPAA mapping.
 
 ---
 
