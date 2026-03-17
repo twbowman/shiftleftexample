@@ -309,15 +309,24 @@ if should_run "9"; then
     if [[ -f "${REPO_PATH}/.secrets" ]]; then
         s9_args+=(-v "${REPO_PATH}/.secrets":/workspace/.secrets:ro)
     fi
-    # Mount cosign key if specified
+    # Mount cosign key if specified and exists; skip signing if not available
+    EFFECTIVE_SKIP_SIGN=$SKIP_SIGN
     if [[ -n "$COSIGN_KEY" ]]; then
-        s9_args+=(-v "$(cd "$(dirname "$COSIGN_KEY")" && pwd)/$(basename "$COSIGN_KEY")":/cosign.key:ro)
+        if [[ -f "$COSIGN_KEY" ]]; then
+            s9_args+=(-v "$(cd "$(dirname "$COSIGN_KEY")" && pwd)/$(basename "$COSIGN_KEY")":/cosign.key:ro)
+        else
+            echo -e "  ${YELLOW}⚠  Cosign key not found: ${COSIGN_KEY} — skipping signing${RESET}"
+            EFFECTIVE_SKIP_SIGN=true
+        fi
+    elif ! $KEYLESS && ! $SKIP_SIGN; then
+        echo -e "  ${YELLOW}⚠  No cosign key or --keyless specified — skipping signing${RESET}"
+        EFFECTIVE_SKIP_SIGN=true
     fi
     s9_args+=($(stage_image stage9-sbom) --image "$IMAGE_TAG" --output /artifacts/stage9)
     if [[ -n "$REGISTRY" ]]; then s9_args+=(--registry "$REGISTRY"); fi
-    if $SKIP_SIGN; then s9_args+=(--skip-sign); fi
+    if $EFFECTIVE_SKIP_SIGN; then s9_args+=(--skip-sign); fi
     if $KEYLESS; then s9_args+=(--keyless); fi
-    if [[ -n "$COSIGN_KEY" ]]; then s9_args+=(--key /cosign.key); fi
+    if [[ -n "$COSIGN_KEY" ]] && [[ -f "$COSIGN_KEY" ]]; then s9_args+=(--key /cosign.key); fi
     s9_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
     rc=0; run_docker "stage9-sbom" "${s9_args[@]}" || rc=$?
     record_stage "stage9-sbom" $rc

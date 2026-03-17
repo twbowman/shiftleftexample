@@ -275,15 +275,24 @@ if (Test-ShouldRun "9") {
     if (Test-Path $secretsFile) {
         $dockerArgs += @("-v", "${secretsFile}:/workspace/.secrets:ro")
     }
+    $effectiveSkipSign = [bool]$SkipSign
     if ($Key) {
-        $keyAbs = (Resolve-Path $Key).Path
-        $dockerArgs += @("-v", "${keyAbs}:/cosign.key:ro")
+        if (Test-Path $Key) {
+            $keyAbs = (Resolve-Path $Key).Path
+            $dockerArgs += @("-v", "${keyAbs}:/cosign.key:ro")
+        } else {
+            Write-Host "  WARNING: Cosign key not found: $Key - skipping signing" -ForegroundColor Yellow
+            $effectiveSkipSign = $true
+        }
+    } elseif (-not $Keyless -and -not $SkipSign) {
+        Write-Host "  WARNING: No cosign key or -Keyless specified - skipping signing" -ForegroundColor Yellow
+        $effectiveSkipSign = $true
     }
     $dockerArgs += @((Get-StageImage "stage9-sbom"), "--image", $Tag, "--output", "/artifacts/stage9")
     if ($Registry)  { $dockerArgs += @("--registry", $Registry) }
-    if ($SkipSign)  { $dockerArgs += "--skip-sign" }
+    if ($effectiveSkipSign) { $dockerArgs += "--skip-sign" }
     if ($Keyless)   { $dockerArgs += "--keyless" }
-    if ($Key)       { $dockerArgs += @("--key", "/cosign.key") }
+    if ($Key -and (Test-Path $Key)) { $dockerArgs += @("--key", "/cosign.key") }
     Invoke-Stage "stage9-sbom" $dockerArgs
 }
 
