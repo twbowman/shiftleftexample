@@ -9,6 +9,20 @@ Evaluates pipeline artifacts against security policies. Verifies image signature
 3. **SBOM Completeness** — Validates SBOM exists, is valid JSON, has components and metadata
 4. **Conftest Policies** — Runs custom .rego policies against all JSON artifacts
 
+## Run via Pipeline
+
+```bash
+# Bash
+./pipeline.sh --stage 10
+./pipeline.sh --stage 10 --skip-verify
+```
+
+```powershell
+# PowerShell
+.\pipeline.ps1 -Stage 10
+.\pipeline.ps1 -Stage 10 -SkipVerify
+```
+
 ## Usage
 
 ### Native

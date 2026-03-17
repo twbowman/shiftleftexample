@@ -2,6 +2,26 @@
 
 Generates a Software Bill of Materials (SBOM) from a container image using Trivy, signs the image with cosign, and attaches the SBOM as an attestation.
 
+## Run via Pipeline
+
+```bash
+# Bash
+./pipeline.sh --stage 9
+./pipeline.sh --stage 9 --skip-sign
+./pipeline.sh --stage 9 --keyless
+./pipeline.sh --stage 9 --key cosign.key
+```
+
+```powershell
+# PowerShell
+.\pipeline.ps1 -Stage 9
+.\pipeline.ps1 -Stage 9 -SkipSign
+.\pipeline.ps1 -Stage 9 -Keyless
+.\pipeline.ps1 -Stage 9 -Key cosign.key
+```
+
+> If no key or `-Keyless` is specified, the pipeline automatically adds `--skip-sign` and generates the SBOM only.
+
 ## Usage
 
 ### Native (requires trivy + cosign)

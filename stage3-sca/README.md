@@ -2,6 +2,22 @@
 
 Scans container images and repositories for known vulnerabilities using Trivy.
 
+## Run via Pipeline
+
+```bash
+# Bash
+./pipeline.sh --stage 3
+./pipeline.sh --stage 3 --tag myapp:1.0.0
+./pipeline.sh --stage 3 --fail-on CRITICAL
+```
+
+```powershell
+# PowerShell
+.\pipeline.ps1 -Stage 3
+.\pipeline.ps1 -Stage 3 -Tag myapp:1.0.0
+.\pipeline.ps1 -Stage 3 -FailOn CRITICAL
+```
+
 ## Usage
 
 ### Native (requires trivy)
