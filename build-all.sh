@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-PREFIX="shiftleft"
+PREFIX="DockerShiftLeft"
 CERT_DIR="certs"
 CERT_FILE="corporate-ca.crt"
 

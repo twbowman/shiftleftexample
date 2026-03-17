@@ -14,7 +14,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$Prefix = "shiftleft"
+    [string]$Prefix = "DockerShiftLeft"
 )
 
 Set-StrictMode -Version Latest

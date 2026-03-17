@@ -48,7 +48,7 @@ param(
     [string]$Target = "",
     [string]$Stage = "all",
     [string]$Tag = "app:latest",
-    [string]$Prefix = "",
+    [string]$Prefix = "DockerShiftLeft",
     [string]$Registry = "",
     [string]$Output = "./artifacts",
     [switch]$Fix,

@@ -52,7 +52,7 @@ fi
 TARGET=""
 STAGES="all"
 IMAGE_TAG="app:latest"
-IMAGE_PREFIX=""
+IMAGE_PREFIX="DockerShiftLeft"
 REGISTRY=""
 ARTIFACTS="./artifacts"
 FIX=false
