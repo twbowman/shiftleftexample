@@ -112,7 +112,7 @@ function Invoke-Stage {
         [void]$runArgs.Add("run")
         [void]$runArgs.Add("--rm")
         foreach ($a in $DockerArgs) { [void]$runArgs.Add($a) }
-        & docker $runArgs 2>&1 | ForEach-Object { Write-Host "  $_" }
+        & docker $runArgs
         $rc = $LASTEXITCODE
     } catch {
         $rc = 1
