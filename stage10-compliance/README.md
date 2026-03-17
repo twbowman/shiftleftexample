@@ -130,6 +130,19 @@ artifacts/stage10/
 
 ## Debugging & Interactive Testing
 
+## Why Conftest
+
+Conftest is a lightweight single-binary CLI (~30MB) that evaluates structured data (JSON, YAML) against OPA/Rego policies. It's the right fit for stage 10 because the job is to check static pipeline artifacts — vuln reports, SBOMs, metadata — against compliance rules without touching a running system.
+
+Alternatives considered:
+- OPA server — designed as a daemon, overkill for a one-shot policy check in a pipeline
+- Custom bash/Python validation — brittle, hard to maintain, not declarative
+- InSpec — tests runtime state of live infrastructure (SSH into hosts, cloud API checks). Complementary to Conftest but solves a different problem. InSpec would fit as a post-deploy stage ("is the running system compliant?") rather than a pre-deploy artifact gate ("are the pipeline outputs compliant?")
+
+Conftest uses Rego, the same policy language as OPA, so policies are portable if you scale up later. Teams can drop `.rego` files into `policies/` without touching any pipeline code.
+
+## Debugging & Interactive Testing
+
 To drop into the container with a shell for debugging or testing tools directly:
 
 ```bash
