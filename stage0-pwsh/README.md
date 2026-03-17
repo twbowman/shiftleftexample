@@ -53,3 +53,26 @@ docker run --rm -v "$(pwd)":/workspace DockerShiftLeft/stage0-pwsh:latest --path
 - Strict mode adds Informational severity
 - Exits 0 if no PowerShell files found
 - Exit code is non-zero if any issues are found
+
+## Debugging & Interactive Testing
+
+To drop into the container with a shell for debugging or testing tools directly:
+
+```bash
+# Interactive shell with your code mounted
+docker run --rm -it -v "$(pwd)":/workspace --entrypoint bash DockerShiftLeft/stage0-pwsh:latest
+
+# Launch pwsh interactively
+pwsh
+
+# Inside pwsh, test PSScriptAnalyzer:
+Import-Module PSScriptAnalyzer
+Invoke-ScriptAnalyzer -Path /workspace/myscript.ps1 -Severity Error,Warning
+Get-Module PSScriptAnalyzer | Select-Object Version
+
+# Or run from bash directly:
+pwsh -NoProfile -Command "Invoke-ScriptAnalyzer -Path /workspace -Recurse -Severity Error,Warning"
+
+# Check versions
+pwsh --version
+```

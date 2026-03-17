@@ -95,3 +95,29 @@ These reports feed into Stage 9 (SBOM) and Stage 10 (compliance policy evaluatio
 ## Why Trivy over Syft + Grype
 
 Trivy handles both vulnerability scanning (Stage 3) and SBOM generation (Stage 9) in a single tool, replacing the Syft + Grype combination. This means one binary to install, one vulnerability database to update, and consistent results across stages. Grype and Syft are solid tools, but maintaining two separate binaries with their own update cycles adds complexity without meaningful coverage gains for our use case.
+
+## Debugging & Interactive Testing
+
+To drop into the container with a shell for debugging or testing tools directly:
+
+```bash
+# Interactive shell with Docker socket mounted
+docker run --rm -it \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$(pwd)":/workspace \
+    --entrypoint bash \
+    DockerShiftLeft/stage3-sca:latest
+
+# Once inside, test Trivy commands:
+trivy --version
+trivy image myapp:1.0.0
+trivy image --severity CRITICAL myapp:1.0.0
+trivy fs /workspace
+
+# Generate a JSON report manually
+trivy image --format json --output /tmp/report.json myapp:1.0.0
+cat /tmp/report.json | jq '.Results[].Vulnerabilities | length'
+
+# Update the vulnerability database
+trivy image --download-db-only
+```

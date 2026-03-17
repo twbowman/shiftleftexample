@@ -135,3 +135,29 @@ cosign generate-key-pair
 2. **SBOM attestation** — the SBOM is attached to the image as an in-toto attestation, verifiable with `cosign verify-attestation`
 
 Downstream Stage 10 can verify both the signature and the SBOM attestation before allowing deployment.
+
+## Debugging & Interactive Testing
+
+To drop into the container with a shell for debugging or testing tools directly:
+
+```bash
+# Interactive shell with Docker socket mounted
+docker run --rm -it \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    --entrypoint bash \
+    DockerShiftLeft/stage9-sbom:latest
+
+# Once inside, test tools:
+trivy --version
+cosign version
+
+# Generate an SBOM manually
+trivy image --format cyclonedx --output /tmp/sbom.json myapp:1.0.0
+cat /tmp/sbom.json | jq '.components | length'
+
+# Test cosign (verify a public image)
+cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' ghcr.io/sigstore/cosign/cosign:latest 2>&1 | head -5
+
+# Check if signing would work (dry run)
+cosign sign --key cosign.key myapp:1.0.0 --dry-run 2>&1 || echo "Expected - no key mounted"
+```

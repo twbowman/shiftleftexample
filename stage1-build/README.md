@@ -75,3 +75,28 @@ When `--output` is specified:
 ```
 
 The tarball can be loaded by Stage 3 for vulnerability scanning without needing the image in the local Docker daemon.
+
+## Debugging & Interactive Testing
+
+To drop into the container with a shell for debugging or testing tools directly:
+
+```bash
+# Interactive shell with Docker socket and workspace mounted
+docker run --rm -it \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$(pwd)":/workspace \
+    --entrypoint bash \
+    DockerShiftLeft/stage1-build:latest
+
+# Once inside, test Docker commands:
+docker version
+docker build -t test:latest /workspace
+docker images
+
+# Inspect a built image
+docker image inspect test:latest --format '{{.Architecture}} {{.Os}} {{.Size}}'
+
+# Test saving an image tarball
+docker save test:latest -o /tmp/test.tar
+ls -lh /tmp/test.tar
+```

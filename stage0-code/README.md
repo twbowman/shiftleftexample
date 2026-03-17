@@ -68,3 +68,31 @@ Valid skip values: `ruff`, `bandit`, `hadolint`, `shellcheck`, `gitleaks`
 ## Why Bandit over Semgrep
 
 Bandit is purpose-built for Python security analysis and adds minimal image size (~5MB). Semgrep adds ~400MB to the image and requires a rules registry download at runtime. For a Python-focused pipeline, Bandit covers the same security patterns (hardcoded passwords, shell injection, pickle usage, SQL injection, etc.) without the overhead. If multi-language SAST is needed in the future, Semgrep can be added as a separate stage.
+
+## Debugging & Interactive Testing
+
+To drop into the container with a shell for debugging or testing tools directly:
+
+```bash
+# Interactive shell with your code mounted
+docker run --rm -it -v "$(pwd)":/workspace --entrypoint bash DockerShiftLeft/stage0-code:latest
+
+# Once inside, test individual tools:
+ruff check /workspace --output-format concise
+ruff format --check --diff /workspace
+bandit -r /workspace -f custom --severity-level medium
+hadolint /workspace/Dockerfile
+shellcheck /workspace/scripts/*.sh
+gitleaks detect --source /workspace --no-git --verbose
+
+# Check tool versions
+ruff --version
+bandit --version
+hadolint --version
+shellcheck --version
+gitleaks version
+
+# Verify CA certificates are loaded
+openssl s_client -connect pypi.org:443 -brief 2>/dev/null | head -5
+curl -sI https://pypi.org | head -3
+```

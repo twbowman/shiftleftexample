@@ -127,3 +127,32 @@ artifacts/stage10/
     "timestamp": "2024-01-15T12:00:00Z"
 }
 ```
+
+## Debugging & Interactive Testing
+
+To drop into the container with a shell for debugging or testing tools directly:
+
+```bash
+# Interactive shell with artifacts and policies mounted
+docker run --rm -it \
+    -v "$(pwd)/artifacts":/artifacts \
+    -v "$(pwd)/policies":/policies \
+    --entrypoint bash \
+    DockerShiftLeft/stage10-compliance:latest
+
+# Once inside, test tools:
+cosign version
+conftest --version
+jq --version
+
+# Test conftest against a specific artifact
+conftest test /artifacts/stage3/vuln-report.json --policy /policies
+conftest test /artifacts/stage9/sbom.cyclonedx.json --policy /policies
+
+# Inspect artifacts with jq
+jq '.Results[].Vulnerabilities | length' /artifacts/stage3/vuln-report.json
+jq '.components | length' /artifacts/stage9/sbom.cyclonedx.json
+
+# Verify an image signature manually
+cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' myimage:latest
+```

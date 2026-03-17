@@ -60,3 +60,25 @@ Valid skip values: `tflint`, `checkov`, `ansible-lint`
 - Ansible: detected heuristically via `ansible.cfg`, `playbooks/`, `roles/`, etc.
 - checkov runs in `--soft-fail` mode by default (findings don't fail the stage); use `--strict` to enforce
 - Exit code is non-zero if any tool fails
+
+## Debugging & Interactive Testing
+
+To drop into the container with a shell for debugging or testing tools directly:
+
+```bash
+# Interactive shell with your code mounted
+docker run --rm -it -v "$(pwd)":/workspace --entrypoint bash DockerShiftLeft/stage0-iac:latest
+
+# Once inside, test individual tools:
+tflint --chdir /workspace/terraform
+checkov --directory /workspace/terraform --framework terraform --compact
+ansible-lint /workspace
+
+# Check tool versions
+tflint --version
+checkov --version
+ansible-lint --version
+
+# Verify CA certificates are loaded
+curl -sI https://github.com | head -3
+```
