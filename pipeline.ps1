@@ -11,6 +11,8 @@
     Valid: 0-code, 0-iac, 0-pwsh, 1, 3, 9, 10, all
 .PARAMETER Tag
     Image tag for stage 1 build (default: app:latest).
+.PARAMETER Prefix
+    Image name prefix (e.g. shiftleft -> shiftleft/stage0-code).
 .PARAMETER Registry
     Container registry for images (e.g. jfrog.io/docker-local).
 .PARAMETER Output
@@ -37,6 +39,7 @@
     ./pipeline.ps1 -Target https://github.com/org/repo.git
     ./pipeline.ps1 -Stage 1,3,9 -Tag myapp:1.0.0 -SkipSign
     ./pipeline.ps1 -Registry jfrog.io/docker-local -Keyless
+    ./pipeline.ps1 -Prefix shiftleft -Stage 0-code
     ./pipeline.ps1 -DryRun
 #>
 
@@ -45,6 +48,7 @@ param(
     [string]$Target = "",
     [string]$Stage = "all",
     [string]$Tag = "app:latest",
+    [string]$Prefix = "",
     [string]$Registry = "",
     [string]$Output = "./artifacts",
     [switch]$Fix,
@@ -72,6 +76,7 @@ function Write-Banner {
 
 function Get-StageImage {
     param([string]$Name)
+    if ($Prefix) { $Name = "$Prefix/$Name" }
     if ($Registry) { return "$Registry/$Name" }
     return $Name
 }
@@ -177,6 +182,7 @@ Write-Host "  Target:    $targetDisplay" -ForegroundColor DarkGray
 Write-Host "  Repo:      $RepoPath" -ForegroundColor DarkGray
 Write-Host "  Stages:    $Stage" -ForegroundColor DarkGray
 Write-Host "  Tag:       $Tag" -ForegroundColor DarkGray
+if ($Prefix)   { Write-Host "  Prefix:    $Prefix" -ForegroundColor DarkGray }
 Write-Host "  Artifacts: $ArtifactsPath" -ForegroundColor DarkGray
 if ($Registry) { Write-Host "  Registry:  $Registry" -ForegroundColor DarkGray }
 if ($DryRun)   { Write-Host "  DRY RUN - no containers will execute" -ForegroundColor Yellow }

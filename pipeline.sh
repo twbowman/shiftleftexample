@@ -13,6 +13,7 @@
 #   -s, --stage <stages>      Comma-separated stages to run (default: all)
 #                              Valid: 0-code, 0-iac, 0-pwsh, 1, 3, 9, 10, all
 #   -t, --tag <tag>           Image tag for stage 1 build (default: app:latest)
+#   -p, --prefix <prefix>    Image name prefix (e.g. shiftleft -> shiftleft/stage0-code)
 #   -R, --registry <url>      Container registry for images (e.g. jfrog.io/docker-local)
 #   -o, --output <dir>        Artifacts directory (default: ./artifacts)
 #   --fix                     Pass --fix to stage 0 scripts
@@ -33,6 +34,7 @@
 #   ./pipeline.sh --stage 0-code,0-iac --fix                   # Stage 0 with auto-fix
 #   ./pipeline.sh --stage 1,3,9 --tag myapp:1.0.0 --skip-sign # Build + scan + SBOM
 #   ./pipeline.sh --registry jfrog.io/docker-local --keyless   # Full pipeline with push
+#   ./pipeline.sh --prefix shiftleft --stage 0-code           # Use shiftleft/stage0-code image
 #   ./pipeline.sh --dry-run                                    # Preview what would run
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -50,6 +52,7 @@ fi
 TARGET=""
 STAGES="all"
 IMAGE_TAG="app:latest"
+IMAGE_PREFIX=""
 REGISTRY=""
 ARTIFACTS="./artifacts"
 FIX=false
@@ -69,6 +72,7 @@ while [[ $# -gt 0 ]]; do
         -T|--target)       TARGET="$2"; shift 2 ;;
         -s|--stage)        STAGES="$2"; shift 2 ;;
         -t|--tag)          IMAGE_TAG="$2"; shift 2 ;;
+        -p|--prefix)       IMAGE_PREFIX="$2"; shift 2 ;;
         -R|--registry)     REGISTRY="$2"; shift 2 ;;
         -o|--output)       ARTIFACTS="$2"; shift 2 ;;
         --fix)             FIX=true; shift ;;
@@ -157,6 +161,9 @@ fi
 # Resolve stage image name — use registry prefix if set
 stage_image() {
     local name="$1"
+    if [[ -n "$IMAGE_PREFIX" ]]; then
+        name="${IMAGE_PREFIX}/${name}"
+    fi
     if [[ -n "$REGISTRY" ]]; then
         echo "${REGISTRY}/${name}"
     else
@@ -200,6 +207,7 @@ echo -e "  ${DIM}Target:    ${TARGET:-$(pwd)}${RESET}"
 echo -e "  ${DIM}Repo:      ${REPO_PATH}${RESET}"
 echo -e "  ${DIM}Stages:    ${STAGES}${RESET}"
 echo -e "  ${DIM}Tag:       ${IMAGE_TAG}${RESET}"
+if [[ -n "$IMAGE_PREFIX" ]]; then echo -e "  ${DIM}Prefix:    ${IMAGE_PREFIX}${RESET}"; fi
 echo -e "  ${DIM}Artifacts: ${ARTIFACTS}${RESET}"
 if [[ -n "$REGISTRY" ]]; then echo -e "  ${DIM}Registry:  ${REGISTRY}${RESET}"; fi
 if $DRY_RUN; then echo -e "  ${YELLOW}DRY RUN — no containers will execute${RESET}"; fi

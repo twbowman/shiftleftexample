@@ -5,18 +5,22 @@
     Builds all stage images using the repo root as the build context.
     Forwards proxy environment variables as build args if set.
     Creates an empty placeholder cert if certs/corporate-ca.crt is not present.
+.PARAMETER Prefix
+    Image name prefix (default: shiftleft). Images are tagged as prefix/stage:latest.
 .EXAMPLE
     ./build-all.ps1
+    ./build-all.ps1 -Prefix myproject
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [string]$Prefix = "shiftleft"
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$Prefix = "shiftleft"
 $CertDir = "certs"
 $CertFile = "corporate-ca.crt"
 

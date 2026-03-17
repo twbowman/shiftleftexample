@@ -6,6 +6,19 @@ PREFIX="shiftleft"
 CERT_DIR="certs"
 CERT_FILE="corporate-ca.crt"
 
+# ── Argument Parsing ─────────────────────────────────────────────────────────
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -p|--prefix) PREFIX="$2"; shift 2 ;;
+        -h|--help)
+            echo "Usage: $0 [--prefix <prefix>]"
+            echo "  -p, --prefix <prefix>  Image name prefix (default: shiftleft)"
+            exit 0
+            ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+done
+
 images=(
   "stage0-code"
   "stage0-iac"
