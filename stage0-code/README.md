@@ -64,3 +64,7 @@ Valid skip values: `ruff`, `bandit`, `hadolint`, `shellcheck`, `gitleaks`
 - shellcheck auto-detects shell type from shebang; skips unsupported shells (zsh, fish)
 - gitleaks runs in `--no-git` mode (scans files, not git history)
 - Exit code is non-zero if any tool fails
+
+## Why Bandit over Semgrep
+
+Bandit is purpose-built for Python security analysis and adds minimal image size (~5MB). Semgrep adds ~400MB to the image and requires a rules registry download at runtime. For a Python-focused pipeline, Bandit covers the same security patterns (hardcoded passwords, shell injection, pickle usage, SQL injection, etc.) without the overhead. If multi-language SAST is needed in the future, Semgrep can be added as a separate stage.
