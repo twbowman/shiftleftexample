@@ -1,0 +1,11 @@
+# Force LF line endings for scripts that run inside Linux containers
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+
+# PowerShell can handle either, but keep consistent
+*.ps1 text eol=crlf
+
+# Certs should be binary-safe
+*.crt binary
+*.pem binary
