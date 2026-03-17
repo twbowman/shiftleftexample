@@ -106,6 +106,7 @@ function Invoke-Stage {
     }
 
     Write-Host "  >> $Name" -ForegroundColor White
+    $logFile = Join-Path $ArtifactsPath "$Name.log"
     $rc = 0
     try {
         $runArgs = New-Object System.Collections.ArrayList
@@ -115,8 +116,19 @@ function Invoke-Stage {
         $argString = ($runArgs | ForEach-Object {
             if ($_ -match '\s') { "`"$_`"" } else { $_ }
         }) -join " "
-        $proc = Start-Process -FilePath "docker" -ArgumentList $argString -NoNewWindow -Wait -PassThru
+        $proc = Start-Process -FilePath "docker" -ArgumentList $argString -NoNewWindow -Wait -PassThru -RedirectStandardOutput $logFile -RedirectStandardError "$logFile.err"
         $rc = $proc.ExitCode
+        # Merge stderr into log
+        if (Test-Path "$logFile.err") {
+            Get-Content "$logFile.err" | Add-Content $logFile
+            Remove-Item "$logFile.err" -Force
+        }
+        # Display log to console
+        if (Test-Path $logFile) {
+            Get-Content $logFile | ForEach-Object { Write-Host "  $_" }
+        }
+        Write-Host ""
+        Write-Host "  Log saved to: $logFile" -ForegroundColor DarkGray
     } catch {
         $rc = 1
     }
