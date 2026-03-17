@@ -31,6 +31,8 @@
     Cosign private key path for stage 9.
 .PARAMETER SkipVerify
     Skip signature verification in stage 10.
+.PARAMETER ContinueOnFail
+    Continue running remaining stages even if one fails (default: stop on first failure).
 .PARAMETER DryRun
     Show what would run without executing.
 .EXAMPLE
@@ -58,6 +60,7 @@ param(
     [switch]$Keyless,
     [string]$Key = "",
     [switch]$SkipVerify,
+    [switch]$ContinueOnFail,
     [switch]$DryRun
 )
 
@@ -120,6 +123,12 @@ function Invoke-Stage {
         $script:ExitCode = 1
         Write-Host ""
         Write-Host "  [FAIL] $Name" -ForegroundColor Red
+        if (-not $ContinueOnFail) {
+            Write-Host ""
+            Write-Host "  Aborting pipeline - stage failed. Use -ContinueOnFail to run all stages." -ForegroundColor Red
+            Show-Summary
+            exit $script:ExitCode
+        }
     } else {
         $script:StageResults += [PSCustomObject]@{ Stage = $Name; Result = "PASS" }
         Write-Host ""
@@ -285,25 +294,29 @@ if (Test-ShouldRun "10") {
 }
 
 # Pipeline Summary
-$elapsed = ((Get-Date) - $PipelineStart).TotalSeconds
+function Show-Summary {
+    $elapsed = ((Get-Date) - $PipelineStart).TotalSeconds
 
-Write-Banner "Pipeline Summary"
+    Write-Banner "Pipeline Summary"
 
-$script:StageResults | Format-Table -Property Stage, Result -AutoSize | Out-String | Write-Host
+    $script:StageResults | Format-Table -Property Stage, Result -AutoSize | Out-String | Write-Host
 
-$passed = @($script:StageResults | Where-Object { $_.Result -eq "PASS" }).Count
-$failed = @($script:StageResults | Where-Object { $_.Result -eq "FAIL" }).Count
+    $passed = @($script:StageResults | Where-Object { $_.Result -eq "PASS" }).Count
+    $failed = @($script:StageResults | Where-Object { $_.Result -eq "FAIL" }).Count
 
-Write-Host "  Passed: $passed | Failed: $failed" -ForegroundColor White
-Write-Host "  Total elapsed: $($elapsed.ToString('F1'))s" -ForegroundColor DarkGray
+    Write-Host "  Passed: $passed | Failed: $failed" -ForegroundColor White
+    Write-Host "  Total elapsed: $($elapsed.ToString('F1'))s" -ForegroundColor DarkGray
 
-if ($script:ExitCode -ne 0) {
-    Write-Host ""
-    Write-Host "  [FAIL] PIPELINE FAILED" -ForegroundColor Red
-} else {
-    Write-Host ""
-    Write-Host "  [PASS] PIPELINE PASSED" -ForegroundColor Green
+    if ($script:ExitCode -ne 0) {
+        Write-Host ""
+        Write-Host "  [FAIL] PIPELINE FAILED" -ForegroundColor Red
+    } else {
+        Write-Host ""
+        Write-Host "  [PASS] PIPELINE PASSED" -ForegroundColor Green
+    }
 }
+
+Show-Summary
 
 # Cleanup cloned dir
 if ($ClonedDir -and (Test-Path $ClonedDir)) {

@@ -23,6 +23,7 @@
 #   --keyless                 Use keyless signing in stage 9
 #   -k, --key <path>          Cosign key for stage 9
 #   --skip-verify             Skip signature verification in stage 10
+#   --continue                Continue running stages after a failure (default: stop on first failure)
 #   --dry-run                 Show what would run without executing
 #   -h, --help                Show this help message
 #
@@ -63,6 +64,7 @@ KEYLESS=false
 COSIGN_KEY=""
 SKIP_VERIFY=false
 DRY_RUN=false
+CONTINUE_ON_FAIL=false
 CLONED_DIR=""
 
 # ── Argument Parsing ─────────────────────────────────────────────────────────
@@ -82,6 +84,7 @@ while [[ $# -gt 0 ]]; do
         --keyless)         KEYLESS=true; shift ;;
         -k|--key)          COSIGN_KEY="$2"; shift 2 ;;
         --skip-verify)     SKIP_VERIFY=true; shift ;;
+        --continue)        CONTINUE_ON_FAIL=true; shift ;;
         --dry-run)         DRY_RUN=true; shift ;;
         -h|--help)
             sed -n '2,/^# ──/{ /^# ──/d; s/^# \?//p; }' "$0"
@@ -198,6 +201,16 @@ record_stage() {
     fi
 }
 
+check_abort() {
+    if [[ $EXIT_CODE -ne 0 ]] && ! $CONTINUE_ON_FAIL; then
+        echo -e "\n  ${RED}Aborting pipeline — stage failed. Use --continue to run all stages.${RESET}"
+        # Jump to summary
+        print_summary
+        exit $EXIT_CODE
+    fi
+}
+}
+
 # ── Pipeline Start ───────────────────────────────────────────────────────────
 PIPELINE_START=$SECONDS
 EXIT_CODE=0
@@ -221,7 +234,7 @@ if should_run "0-code"; then
     s0_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
     rc=0; run_docker "stage0-code" "${s0_args[@]}" || rc=$?
     record_stage "stage0-code" $rc
-    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; fi
+    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; check_abort; fi
 fi
 
 # ── Stage 0: IaC ─────────────────────────────────────────────────────────────
@@ -233,7 +246,7 @@ if should_run "0-iac"; then
     s0_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
     rc=0; run_docker "stage0-iac" "${s0_args[@]}" || rc=$?
     record_stage "stage0-iac" $rc
-    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; fi
+    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; check_abort; fi
 fi
 
 # ── Stage 0: PowerShell ──────────────────────────────────────────────────────
@@ -244,7 +257,7 @@ if should_run "0-pwsh"; then
     s0_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
     rc=0; run_docker "stage0-pwsh" "${s0_args[@]}" || rc=$?
     record_stage "stage0-pwsh" $rc
-    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; fi
+    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; check_abort; fi
 fi
 
 # ── Stage 1: Build ───────────────────────────────────────────────────────────
@@ -262,7 +275,7 @@ if should_run "1"; then
     s1_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
     rc=0; run_docker "stage1-build" "${s1_args[@]}" || rc=$?
     record_stage "stage1-build" $rc
-    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; fi
+    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; check_abort; fi
 fi
 
 # ── Stage 3: SCA ─────────────────────────────────────────────────────────────
@@ -281,7 +294,7 @@ if should_run "3"; then
     s3_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
     rc=0; run_docker "stage3-sca" "${s3_args[@]}" || rc=$?
     record_stage "stage3-sca" $rc
-    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; fi
+    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; check_abort; fi
 fi
 
 # ── Stage 9: SBOM & Sign ─────────────────────────────────────────────────────
@@ -309,7 +322,7 @@ if should_run "9"; then
     s9_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
     rc=0; run_docker "stage9-sbom" "${s9_args[@]}" || rc=$?
     record_stage "stage9-sbom" $rc
-    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; fi
+    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; check_abort; fi
 fi
 
 # ── Stage 10: Compliance ─────────────────────────────────────────────────────
@@ -331,38 +344,41 @@ if should_run "10"; then
     s10_args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
     rc=0; run_docker "stage10-compliance" "${s10_args[@]}" || rc=$?
     record_stage "stage10-compliance" $rc
-    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; fi
+    if [[ $rc -ne 0 ]]; then EXIT_CODE=1; check_abort; fi
 fi
 
 # ── Pipeline Summary ─────────────────────────────────────────────────────────
-PIPELINE_ELAPSED=$(( SECONDS - PIPELINE_START ))
+print_summary() {
+    local PIPELINE_ELAPSED=$(( SECONDS - PIPELINE_START ))
 
-banner "Pipeline Summary"
+    banner "Pipeline Summary"
 
-printf "  %-25s %s\n" "Stage" "Result"
-printf "  %-25s %s\n" "─────" "──────"
-for result in "${STAGE_RESULTS[@]}"; do
-    stage="${result%%:*}"
-    status="${result##*:}"
-    if [[ "$status" == "PASS" ]]; then
-        printf "  %-25s ${GREEN}%s${RESET}\n" "$stage" "$status"
+    printf "  %-25s %s\n" "Stage" "Result"
+    printf "  %-25s %s\n" "─────" "──────"
+    for result in "${STAGE_RESULTS[@]}"; do
+        stage="${result%%:*}"
+        status="${result##*:}"
+        if [[ "$status" == "PASS" ]]; then
+            printf "  %-25s ${GREEN}%s${RESET}\n" "$stage" "$status"
+        else
+            printf "  %-25s ${RED}%s${RESET}\n" "$stage" "$status"
+        fi
+    done
+
+    passed=0 failed=0
+    for r in "${STAGE_RESULTS[@]}"; do
+        case "${r##*:}" in PASS) passed=$((passed+1));; FAIL) failed=$((failed+1));; esac
+    done
+
+    echo -e "\n  ${WHITE}Passed: ${passed} | Failed: ${failed}${RESET}"
+    echo -e "  ${DIM}Total elapsed: ${PIPELINE_ELAPSED}s${RESET}"
+
+    if [[ $EXIT_CODE -ne 0 ]]; then
+        echo -e "\n  ${RED}✗ PIPELINE FAILED${RESET}"
     else
-        printf "  %-25s ${RED}%s${RESET}\n" "$stage" "$status"
+        echo -e "\n  ${GREEN}✓ PIPELINE PASSED${RESET}"
     fi
-done
+}
 
-passed=0 failed=0
-for r in "${STAGE_RESULTS[@]}"; do
-    case "${r##*:}" in PASS) passed=$((passed+1));; FAIL) failed=$((failed+1));; esac
-done
-
-echo -e "\n  ${WHITE}Passed: ${passed} | Failed: ${failed}${RESET}"
-echo -e "  ${DIM}Total elapsed: ${PIPELINE_ELAPSED}s${RESET}"
-
-if [[ $EXIT_CODE -ne 0 ]]; then
-    echo -e "\n  ${RED}✗ PIPELINE FAILED${RESET}"
-else
-    echo -e "\n  ${GREEN}✓ PIPELINE PASSED${RESET}"
-fi
-
+print_summary
 exit $EXIT_CODE
