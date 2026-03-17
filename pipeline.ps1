@@ -112,8 +112,11 @@ function Invoke-Stage {
         [void]$runArgs.Add("run")
         [void]$runArgs.Add("--rm")
         foreach ($a in $DockerArgs) { [void]$runArgs.Add($a) }
-        & docker $runArgs
-        $rc = $LASTEXITCODE
+        $argString = ($runArgs | ForEach-Object {
+            if ($_ -match '\s') { "`"$_`"" } else { $_ }
+        }) -join " "
+        $proc = Start-Process -FilePath "docker" -ArgumentList $argString -NoNewWindow -Wait -PassThru
+        $rc = $proc.ExitCode
     } catch {
         $rc = 1
     }
