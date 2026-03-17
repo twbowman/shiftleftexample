@@ -133,6 +133,35 @@ The pipeline stops on the first stage failure by default. Use `--continue` (bash
 ./pipeline.sh --dry-run
 ```
 
+```powershell
+# Scan a local directory (code + IaC only)
+# NOTE: In PowerShell, comma-separated stage lists MUST be in double quotes
+.\pipeline.ps1 -Target ./myapp -Stage "0-code,0-iac"
+
+# Scan a git repo
+.\pipeline.ps1 -Target https://github.com/org/repo.git
+
+# Full pipeline with JFrog registry
+.\pipeline.ps1 -Target ./myapp -Tag myapp:1.0.0 -Registry jfrog.io/docker-local -Keyless
+
+# Build, scan, and generate SBOM (no signing)
+.\pipeline.ps1 -Stage "1,3,9" -Tag myapp:1.0.0 -SkipSign
+
+# Auto-fix code issues
+.\pipeline.ps1 -Stage 0-code -Target ./myapp -Fix
+
+# Use custom image prefix
+.\pipeline.ps1 -Prefix myproject -Stage 0-code
+
+# Run all stages even if one fails
+.\pipeline.ps1 -ContinueOnFail
+
+# Dry run to preview
+.\pipeline.ps1 -DryRun
+```
+
+> **PowerShell note:** When passing multiple stages, wrap the value in double quotes (e.g. `-Stage "0-code,0-iac"`). Without quotes, PowerShell interprets the comma as an array separator and only the first value is passed. Single stages like `-Stage 0-code` do not need quotes.
+
 ---
 
 ## Corporate Network / Proxy
@@ -274,4 +303,8 @@ Test locally:
 
 ```bash
 ./pipeline.sh --target ./samples --stage 0-code,0-iac,0-pwsh
+```
+
+```powershell
+.\pipeline.ps1 -Target ./samples -Stage "0-code,0-iac,0-pwsh"
 ```
