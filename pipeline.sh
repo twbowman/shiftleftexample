@@ -12,7 +12,7 @@
 #   -T, --target <path|url>   Local path or git URL to scan (default: current directory)
 #   -s, --stage <stages>      Comma-separated stages to run (default: all)
 #                              Valid: 0-code, 0-iac, 0-pwsh, 1, 3, 9, 10, all
-#   -t, --tag <tag>           Image tag for stage 1 build (default: app:latest)
+#   -t, --tag <tag>           Image tag for stage 1 build (default: <target-name>:latest)
 #   -p, --prefix <prefix>    Image name prefix (e.g. shiftleft -> shiftleft/stage0-code)
 #   -R, --registry <url>      Container registry for images (e.g. jfrog.io/docker-local)
 #   -o, --output <dir>        Artifacts directory (default: ./artifacts)
@@ -52,7 +52,7 @@ fi
 # ── Defaults ─────────────────────────────────────────────────────────────────
 TARGET=""
 STAGES="all"
-IMAGE_TAG="app:latest"
+IMAGE_TAG=""
 IMAGE_PREFIX="DockerShiftLeft"
 REGISTRY=""
 ARTIFACTS="./artifacts"
@@ -130,6 +130,17 @@ trap cleanup EXIT
 resolve_target
 mkdir -p "$ARTIFACTS"
 ARTIFACTS="$(cd "$ARTIFACTS" && pwd)"
+
+# Derive tag from target name if not explicitly provided
+if [[ -z "$IMAGE_TAG" ]]; then
+    if [[ "$TARGET" =~ ^(https?://|git@|ssh://|git://) ]]; then
+        # Extract repo name from URL (strip .git suffix)
+        repo_name="$(basename "$TARGET" .git)"
+    else
+        repo_name="$(basename "$REPO_PATH")"
+    fi
+    IMAGE_TAG="${repo_name}:latest"
+fi
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 banner() {

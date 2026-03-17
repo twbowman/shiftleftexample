@@ -10,7 +10,7 @@
     Comma-separated stages to run (default: all).
     Valid: 0-code, 0-iac, 0-pwsh, 1, 3, 9, 10, all
 .PARAMETER Tag
-    Image tag for stage 1 build (default: app:latest).
+    Image tag for stage 1 build (default: <target-name>:latest).
 .PARAMETER Prefix
     Image name prefix (e.g. shiftleft -> shiftleft/stage0-code).
 .PARAMETER Registry
@@ -49,7 +49,7 @@
 param(
     [string]$Target = "",
     [string]$Stage = "all",
-    [string]$Tag = "app:latest",
+    [string]$Tag = "",
     [string]$Prefix = "DockerShiftLeft",
     [string]$Registry = "",
     [string]$Output = "./artifacts",
@@ -173,6 +173,17 @@ if (-not $Target) {
 
 # Ensure artifacts dir exists and is absolute
 New-Item -ItemType Directory -Force -Path $Output | Out-Null
+
+# Derive tag from target name if not explicitly provided
+if (-not $Tag) {
+    if ($Target -match '^(https?://|git@|ssh://|git://)') {
+        # Extract repo name from URL (strip .git suffix)
+        $repoName = ($Target -split '/')[-1] -replace '\.git$', ''
+    } else {
+        $repoName = Split-Path -Leaf $RepoPath
+    }
+    $Tag = "${repoName}:latest"
+}
 $ArtifactsPath = (Resolve-Path $Output).Path
 
 # Cleanup on exit
