@@ -1,20 +1,21 @@
-FROM ubuntu:24.04
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5
 
 ARG TARGETARCH
 
 LABEL maintainer="stage9-sbom"
 LABEL description="Stage 9: SBOM Generation & Image Signing"
 
-ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 
 # ── System packages ──────────────────────────────────────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN microdnf install -y --nodocs \
     bash \
     ca-certificates \
-    curl \
     jq \
-    && rm -rf /var/lib/apt/lists/*
+    openssl \
+    tar \
+    gzip \
+    && microdnf clean all
 
 # ── Corporate CA certificate (optional — filter out expired certs) ────────────
 COPY certs/corporate-ca.crt /tmp/corporate-ca.crt
@@ -22,14 +23,14 @@ RUN if [ -s /tmp/corporate-ca.crt ]; then \
       csplit -z -f /tmp/cert- /tmp/corporate-ca.crt '/-----BEGIN CERTIFICATE-----/' '{*}' 2>/dev/null || true; \
       for f in /tmp/cert-*; do \
         if openssl x509 -in "$f" -checkend 0 -noout 2>/dev/null; then \
-          cat "$f" >> /etc/ssl/certs/ca-certificates.crt; \
+          cat "$f" >> /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem; \
         fi; \
       done; \
       rm -f /tmp/cert-*; \
     fi \
     && rm -f /tmp/corporate-ca.crt
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+ENV CURL_CA_BUNDLE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
 
 # ── Docker CLI ───────────────────────────────────────────────────────────────
 ARG DOCKER_VERSION=27.4.1

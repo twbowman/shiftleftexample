@@ -1,25 +1,35 @@
-FROM ubuntu:24.04
+FROM registry.access.redhat.com/ubi9/ubi:9.5
 
 ARG TARGETARCH
 
 LABEL maintainer="stage0-code"
 LABEL description="Stage 0 Code: Code quality & general security"
 
-ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 
 # ── System packages ──────────────────────────────────────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN dnf install -y --nodocs --allowerasing \
     bash \
     ca-certificates \
     curl \
     git \
     jq \
+    openssl \
     python3 \
     python3-pip \
-    shellcheck \
     unzip \
-    && rm -rf /var/lib/apt/lists/*
+    xz \
+    && dnf clean all
+
+# ── ShellCheck (binary — not available in UBI repos) ─────────────────────────
+ARG SHELLCHECK_VERSION=0.10.0
+RUN SC_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "x86_64") \
+    && curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.${SC_ARCH}.tar.xz" \
+    -o /tmp/shellcheck.tar.xz \
+    && tar -xJf /tmp/shellcheck.tar.xz -C /tmp \
+    && mv /tmp/shellcheck-v${SHELLCHECK_VERSION}/shellcheck /usr/local/bin/shellcheck \
+    && chmod +x /usr/local/bin/shellcheck \
+    && rm -rf /tmp/shellcheck*
 
 # ── Corporate CA certificate (optional — filter out expired certs) ────────────
 COPY certs/corporate-ca.crt /tmp/corporate-ca.crt
@@ -27,19 +37,19 @@ RUN if [ -s /tmp/corporate-ca.crt ]; then \
       csplit -z -f /tmp/cert- /tmp/corporate-ca.crt '/-----BEGIN CERTIFICATE-----/' '{*}' 2>/dev/null || true; \
       for f in /tmp/cert-*; do \
         if openssl x509 -in "$f" -checkend 0 -noout 2>/dev/null; then \
-          cat "$f" >> /etc/ssl/certs/ca-certificates.crt; \
+          cat "$f" >> /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem; \
         fi; \
       done; \
       rm -f /tmp/cert-*; \
     fi \
     && rm -f /tmp/corporate-ca.crt
-ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
-ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PIP_CERT=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+ENV REQUESTS_CA_BUNDLE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+ENV SSL_CERT_FILE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+ENV CURL_CA_BUNDLE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
 
 # ── Python tools: ruff, bandit ───────────────────────────────────────────────
-RUN pip3 install --no-cache-dir --break-system-packages \
+RUN pip3 install --no-cache-dir \
     ruff \
     bandit
 
