@@ -8,6 +8,9 @@ cosign.pub
 certs/*.crt
 certs/*.pem
 
+# Stage-level certs (copied by build scripts, cleaned up after build)
+stage*/certs/
+
 # Artifacts
 artifacts/
 

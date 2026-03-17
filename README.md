@@ -57,13 +57,14 @@ Images are tagged with the `DockerShiftLeft/` prefix by default (e.g. `DockerShi
 
 If `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` are set in your environment, they are forwarded as build args automatically.
 
-You can also build individually from the repo root:
+You can also build individually from the stage directory (after copying the cert):
 
 ```bash
-docker build -f stage0-code/Dockerfile -t DockerShiftLeft/stage0-code:latest .
+cp certs/corporate-ca.crt stage0-code/certs/corporate-ca.crt
+docker build -t DockerShiftLeft/stage0-code:latest stage0-code/
 ```
 
-> **Note:** All builds must use the repo root as the build context (`.`) so Dockerfiles can access `certs/corporate-ca.crt`.
+> **Note:** Each stage uses its own directory as the build context. The build scripts automatically copy `certs/corporate-ca.crt` into each stage's `certs/` subdirectory before building and clean up afterwards. This matches the standard Docker app pattern used across the group.
 
 ### Run the full pipeline
 

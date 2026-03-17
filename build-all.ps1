@@ -2,11 +2,11 @@
 .SYNOPSIS
     Build all pipeline stage Docker images locally.
 .DESCRIPTION
-    Builds all stage images using the repo root as the build context.
+    Builds all stage images using each stage directory as the build context.
+    Copies the corporate CA cert into each stage's certs/ directory before building.
     Forwards proxy environment variables as build args if set.
-    Creates an empty placeholder cert if certs/corporate-ca.crt is not present.
 .PARAMETER Prefix
-    Image name prefix (default: shiftleft). Images are tagged as prefix/stage:latest.
+    Image name prefix (default: DockerShiftLeft). Images are tagged as prefix/stage:latest.
 .EXAMPLE
     ./build-all.ps1
     ./build-all.ps1 -Prefix myproject
@@ -35,19 +35,13 @@ $Images = @(
 )
 
 # Check for corporate CA cert
-$CertPath = Join-Path $RepoDir (Join-Path $CertDir $CertFile)
-Write-Host "==> Checking for $CertDir\$CertFile..."
-$CertPlaceholder = $false
-if (-not (Test-Path $CertPath)) {
-    Write-Host "==> NOTE: $CertDir\$CertFile not found - building without corporate CA cert." -ForegroundColor Yellow
-    $certDirPath = Join-Path $RepoDir $CertDir
-    if (-not (Test-Path $certDirPath)) {
-        New-Item -ItemType Directory -Force -Path $certDirPath | Out-Null
-    }
-    New-Item -ItemType File -Force -Path $CertPath | Out-Null
-    $CertPlaceholder = $true
-} else {
+$CertSrc = Join-Path $RepoDir (Join-Path $CertDir $CertFile)
+$HasCert = $false
+if ((Test-Path $CertSrc) -and ((Get-Item $CertSrc).Length -gt 0)) {
     Write-Host "==> Found $CertDir\$CertFile"
+    $HasCert = $true
+} else {
+    Write-Host "==> NOTE: $CertDir\$CertFile not found - building without corporate CA cert." -ForegroundColor Yellow
 }
 
 # Proxy build args (forwarded if set in environment)
@@ -60,8 +54,6 @@ foreach ($var in @("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https
         Write-Host "==> Forwarding $var to builds"
     }
 }
-
-Write-Host "==> Building $($Images.Count) images..."
 
 # Fix Windows CRLF line endings for files that will run inside Linux containers
 Write-Host "==> Converting line endings to LF for Linux compatibility..."
@@ -92,32 +84,48 @@ Write-Host "==> Building $($Images.Count) images..."
 
 foreach ($stage in $Images) {
     $tag = "$Prefix/${stage}:latest"
-    $dockerfile = Join-Path $RepoDir (Join-Path $stage "Dockerfile")
+    $stageDir = Join-Path $RepoDir $stage
+    $stageCertDir = Join-Path $stageDir $CertDir
+
+    # Copy cert into stage's certs/ directory (or create empty placeholder)
+    if (-not (Test-Path $stageCertDir)) {
+        New-Item -ItemType Directory -Force -Path $stageCertDir | Out-Null
+    }
+    $stageCertFile = Join-Path $stageCertDir $CertFile
+    if ($HasCert) {
+        Copy-Item -Path $CertSrc -Destination $stageCertFile -Force
+    } else {
+        New-Item -ItemType File -Force -Path $stageCertFile | Out-Null
+    }
+
     Write-Host ""
-    Write-Host "--- Building $tag (context: repo root, dockerfile: $stage\Dockerfile) ---"
+    Write-Host "--- Building $tag (context: $stage/) ---"
 
     $cmdArgs = New-Object System.Collections.ArrayList
     [void]$cmdArgs.Add("build")
     foreach ($ba in $BuildArgs) { [void]$cmdArgs.Add($ba) }
-    [void]$cmdArgs.Add("-f")
-    [void]$cmdArgs.Add($dockerfile)
     [void]$cmdArgs.Add("-t")
     [void]$cmdArgs.Add($tag)
-    [void]$cmdArgs.Add($RepoDir)
+    [void]$cmdArgs.Add($stageDir)
 
     & docker $cmdArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Host "==> FAILED to build $tag" -ForegroundColor Red
-        if ($CertPlaceholder) { Remove-Item -Force $CertPath }
+        # Clean up stage certs
+        foreach ($s in $Images) {
+            $cleanDir = Join-Path (Join-Path $RepoDir $s) $CertDir
+            if (Test-Path $cleanDir) { Remove-Item -Recurse -Force $cleanDir }
+        }
         exit 1
     }
+}
+
+# Clean up stage certs
+foreach ($stage in $Images) {
+    $cleanDir = Join-Path (Join-Path $RepoDir $stage) $CertDir
+    if (Test-Path $cleanDir) { Remove-Item -Recurse -Force $cleanDir }
 }
 
 Write-Host ""
 Write-Host "==> All images built:"
 & docker images --filter "reference=$Prefix/*" --format "table {{.Repository}}`t{{.Tag}}`t{{.Size}}"
-
-# Clean up placeholder cert if we created one
-if ($CertPlaceholder) {
-    Remove-Item -Force $CertPath
-}
