@@ -36,6 +36,8 @@ Stages 0-code, 0-iac, and 0-pwsh are designed to run in parallel.
 
 ### Build all stage images
 
+> **Note:** `build-all.sh` / `build-all.ps1` are intended for local testing and bootstrapping. In production, stage images will be built through the pipeline itself, pushed to JFrog Artifactory, and the pipeline will pull from the registry via `--registry` / `-Registry` instead of using local builds.
+
 Place your corporate CA certificate (PEM format) at `certs/corporate-ca.crt`, then:
 
 ```bash
