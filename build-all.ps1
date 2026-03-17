@@ -65,14 +65,30 @@ Write-Host "==> Building $($Images.Count) images..."
 
 # Fix Windows CRLF line endings for files that will run inside Linux containers
 Write-Host "==> Converting line endings to LF for Linux compatibility..."
-Get-ChildItem -Path $RepoDir -Recurse -Include "*.sh","*.bash","*.zsh","Dockerfile" | ForEach-Object {
-    $content = [System.IO.File]::ReadAllText($_.FullName)
-    if ($content -match "`r`n") {
+$filesToFix = @()
+$filesToFix += Get-ChildItem -Path $RepoDir -Recurse -Filter "*.sh"
+$filesToFix += Get-ChildItem -Path $RepoDir -Recurse -Filter "*.bash"
+$filesToFix += Get-ChildItem -Path $RepoDir -Recurse -Filter "*.zsh"
+$filesToFix += Get-ChildItem -Path $RepoDir -Recurse -Filter "Dockerfile"
+$filesToFix += Get-ChildItem -Path $RepoDir -Recurse -Filter "*.yml"
+$filesToFix += Get-ChildItem -Path $RepoDir -Recurse -Filter "*.yaml"
+$filesToFix += Get-ChildItem -Path $RepoDir -Recurse -Filter "*.cfg"
+$filesToFix += Get-ChildItem -Path $RepoDir -Recurse -Filter "*.rego"
+foreach ($f in $filesToFix) {
+    if ($f.PSIsContainer) { continue }
+    $bytes = [System.IO.File]::ReadAllBytes($f.FullName)
+    $hasCR = $false
+    foreach ($b in $bytes) { if ($b -eq 13) { $hasCR = $true; break } }
+    if ($hasCR) {
+        $content = [System.IO.File]::ReadAllText($f.FullName)
         $content = $content -replace "`r`n", "`n"
-        [System.IO.File]::WriteAllText($_.FullName, $content)
-        Write-Host "     Fixed: $($_.FullName)" -ForegroundColor DarkGray
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($f.FullName, $content, $utf8NoBom)
+        Write-Host "     Fixed: $($f.FullName)" -ForegroundColor DarkGray
     }
 }
+
+Write-Host "==> Building $($Images.Count) images..."
 
 foreach ($stage in $Images) {
     $tag = "$Prefix/${stage}:latest"
