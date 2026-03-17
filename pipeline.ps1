@@ -56,10 +56,10 @@ param(
     [switch]$Fix,
     [switch]$Strict,
     [string]$FailOn = "",
-    [switch]$SkipSign,
+    [Alias("NoSign")][switch]$SkipSign,
     [switch]$Keyless,
     [string]$Key = "",
-    [switch]$SkipVerify,
+    [Alias("NoVerify")][switch]$SkipVerify,
     [switch]$ContinueOnFail,
     [switch]$DryRun
 )
